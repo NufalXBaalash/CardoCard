@@ -1,0 +1,2 @@
+D:/CardoCard/test_1/android/app/.cxx/Debug/4r5p6u1e/armeabi-v7a/CMakeFiles/edit_cache.dir
+D:/CardoCard/test_1/android/app/.cxx/Debug/4r5p6u1e/armeabi-v7a/CMakeFiles/rebuild_cache.dir
