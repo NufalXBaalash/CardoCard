@@ -1,11 +1,12 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:test_1/utils/theme_provider.dart';
 import 'package:test_1/utils/language_provider.dart';
 import 'package:test_1/utils/app_localizations.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
 
 class DoctorListingPage extends StatefulWidget {
   final String? specialtyFilter;
@@ -21,7 +22,6 @@ class DoctorListingPage extends StatefulWidget {
 
 class _DoctorListingPageState extends State<DoctorListingPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   
   bool _isLoading = true;
   List<Map<String, dynamic>> _doctors = [];
@@ -29,6 +29,11 @@ class _DoctorListingPageState extends State<DoctorListingPage> {
   String? _selectedSpecialty;
   
   final TextEditingController _searchController = TextEditingController();
+
+  // Bio-Tech Colors
+  static const Color biotechBlack = Color(0xFF0F0F0F);
+  static const Color biotechCyan = Color(0xFF00E5FF);
+  static const Color biotechCyanDeep = Color(0xFF00B8D4); // WCAG-compliant for Light Mode
   
   @override
   void initState() {
@@ -38,28 +43,19 @@ class _DoctorListingPageState extends State<DoctorListingPage> {
   }
   
   Future<void> _loadDoctors() async {
-    setState(() {
-      _isLoading = true;
-    });
-    
+    setState(() => _isLoading = true);
     try {
-      // Query doctors collection
       Query query = _firestore.collection('doctors');
-      
-      // Apply specialty filter if selected
       if (_selectedSpecialty != null && _selectedSpecialty!.isNotEmpty) {
         query = query.where('specialty', isEqualTo: _selectedSpecialty);
       }
       
       final QuerySnapshot snapshot = await query.get();
-      
       final List<Map<String, dynamic>> loadedDoctors = [];
       
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        
-        // Calculate average rating
-        double avgRating = 4.5; // Default rating
+        double avgRating = 4.5;
         if (data.containsKey('ratings') && data['ratings'] is List) {
           final ratings = List<num>.from(data['ratings']);
           if (ratings.isNotEmpty) {
@@ -69,20 +65,11 @@ class _DoctorListingPageState extends State<DoctorListingPage> {
         
         loadedDoctors.add({
           'id': doc.id,
-          'name': data['name'] ?? 'Unknown Doctor',
-          'specialty': data['specialty'] ?? 'General Practitioner',
-          'bio': data['bio'] ?? '',
-          'location': data['location'] ?? 'Unknown Location',
-          'address': data['address'] ?? '',
-          'price': data['price'] ?? 0,
-          'appointmentDuration': data['appointmentDuration'] ?? 30,
+          ...data,
           'rating': avgRating,
-          'reviewCount': data['reviewCount'] ?? 0,
-          'imageUrl': data['imageUrl'],
         });
       }
       
-      // If no doctors in database, add some mock data
       if (loadedDoctors.isEmpty) {
         loadedDoctors.addAll([
           {
@@ -91,12 +78,10 @@ class _DoctorListingPageState extends State<DoctorListingPage> {
             'specialty': 'Cardiologist',
             'bio': 'Specialist in heart diseases and treatments',
             'location': 'Cairo Medical Center',
-            'address': 'Downtown, Cairo',
             'price': 300,
             'appointmentDuration': 30,
             'rating': 4.8,
             'reviewCount': 253,
-            'imageUrl': null,
           },
           {
             'id': '2',
@@ -104,25 +89,10 @@ class _DoctorListingPageState extends State<DoctorListingPage> {
             'specialty': 'Neurologist',
             'bio': 'Specialist in brain and nervous system',
             'location': 'Neurology Center',
-            'address': 'Nasr City, Cairo',
             'price': 350,
             'appointmentDuration': 45,
             'rating': 4.7,
             'reviewCount': 187,
-            'imageUrl': null,
-          },
-          {
-            'id': '3',
-            'name': 'Dr. Omar Khaled',
-            'specialty': 'Orthopedist',
-            'bio': 'Specialist in bone and joint treatments',
-            'location': 'Orthopedic Clinic',
-            'address': 'Maadi, Cairo',
-            'price': 280,
-            'appointmentDuration': 30,
-            'rating': 4.5,
-            'reviewCount': 142,
-            'imageUrl': null,
           },
         ]);
       }
@@ -132,408 +102,287 @@ class _DoctorListingPageState extends State<DoctorListingPage> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading doctors: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      debugPrint('Error loading doctors: $e');
+      setState(() => _isLoading = false);
     }
   }
   
   List<Map<String, dynamic>> get _filteredDoctors {
     if (_searchQuery.isEmpty) return _doctors;
-    
     return _doctors.where((doctor) {
       final name = doctor['name'].toString().toLowerCase();
       final specialty = doctor['specialty'].toString().toLowerCase();
       final query = _searchQuery.toLowerCase();
-      
       return name.contains(query) || specialty.contains(query);
     }).toList();
   }
   
   @override
   Widget build(BuildContext context) {
+    final isRTL = Provider.of<LanguageProvider>(context).isRTL;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    final languageProvider = Provider.of<LanguageProvider>(context);
-    final isRTL = languageProvider.isRTL;
+    final dynamicCyan = isDarkMode ? biotechCyan : biotechCyanDeep;
     
+    final scaffoldBg = isDarkMode ? biotechBlack : const Color(0xFFF5F7FA);
+    final textColor = isDarkMode ? Colors.white : biotechBlack;
+
     return Scaffold(
+      backgroundColor: scaffoldBg,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(
-          context.translate('find_doctor'),
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: isDarkMode ? Colors.white : Colors.black,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(color: scaffoldBg.withOpacity(0.5)),
           ),
         ),
-        backgroundColor: isDarkMode ? Colors.grey[900] : Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: isDarkMode ? Colors.white : Colors.black,
+        title: Text(
+          context.translate('find_doctor').toUpperCase(),
+          style: GoogleFonts.orbitron(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: dynamicCyan,
+            letterSpacing: 2,
           ),
+        ),
+        leading: IconButton(
+          icon: Icon(isRTL ? Icons.arrow_forward : Icons.arrow_back, color: dynamicCyan),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              isDarkMode ? Icons.wb_sunny_outlined : Icons.nights_stay_outlined,
-              color: isDarkMode ? Colors.white : Colors.black,
-            ),
-            onPressed: () {
-              final provider = Provider.of<ThemeProvider>(context, listen: false);
-              provider.toggleTheme();
-            },
-          ),
-        ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          // Search bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: isDarkMode ? Colors.grey[900] : Colors.white,
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
-              decoration: InputDecoration(
-                hintText: context.translate('search_doctors'),
-                prefixIcon: Icon(Icons.search, color: isDarkMode ? Colors.white70 : Colors.grey),
-                filled: true,
-                fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              ),
+          Positioned(
+            top: -100,
+            left: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: dynamicCyan.withOpacity(isDarkMode ? 0.05 : 0.08)),
             ),
           ),
-          
-          // Filter options
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: isDarkMode ? Colors.grey[900] : Colors.white,
-            child: Row(
+          SafeArea(
+            child: Column(
               children: [
+                _buildSearchBar(context, dynamicCyan, isDarkMode, textColor),
+                _buildQuickFilters(context, dynamicCyan, isDarkMode, textColor),
                 Expanded(
-                  child: ElevatedButton.icon(
-                    icon: Icon(Icons.filter_list, size: 18),
-                    label: Text(context.translate('filter')),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                      foregroundColor: isDarkMode ? Colors.white : Colors.black,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    onPressed: () {
-                      // Show filter options
-                    },
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    icon: Icon(Icons.sort, size: 18),
-                    label: Text(context.translate('sort')),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                      foregroundColor: isDarkMode ? Colors.white : Colors.black,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    onPressed: () {
-                      // Show sort options
-                    },
-                  ),
+                  child: _isLoading
+                      ? Center(child: CircularProgressIndicator(color: dynamicCyan))
+                      : _buildDoctorList(isRTL, dynamicCyan, isDarkMode, textColor),
                 ),
               ],
             ),
-          ),
-          
-          // Doctor count
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Align(
-              alignment: isRTL ? Alignment.centerRight : Alignment.centerLeft,
-              child: Text(
-                '${_filteredDoctors.length} ${context.translate('doctors_found')}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white70 : Colors.grey[700],
-                ),
-              ),
-            ),
-          ),
-          
-          // Doctor list
-          Expanded(
-            child: _isLoading
-                ? Center(child: CircularProgressIndicator())
-                : _filteredDoctors.isEmpty
-                    ? Center(
-                        child: Text(
-                          context.translate('no_doctors_found'),
-                          style: TextStyle(
-                            color: isDarkMode ? Colors.white70 : Colors.grey[700],
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: _filteredDoctors.length,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemBuilder: (context, index) {
-                          final doctor = _filteredDoctors[index];
-                          return _buildDoctorCard(doctor, context, isDarkMode, isRTL);
-                        },
-                      ),
           ),
         ],
       ),
     );
   }
-  
-  Widget _buildDoctorCard(Map<String, dynamic> doctor, BuildContext context, bool isDarkMode, bool isRTL) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+
+  Widget _buildSearchBar(BuildContext context, Color dynamicCyan, bool isDarkMode, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDarkMode ? Colors.white.withOpacity(0.03) : Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: dynamicCyan.withOpacity(0.2)),
+          boxShadow: isDarkMode ? [] : [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: TextField(
+          controller: _searchController,
+          onChanged: (v) => setState(() => _searchQuery = v),
+          style: GoogleFonts.poppins(color: textColor),
+          decoration: InputDecoration(
+            hintText: context.translate('search_doctors').toUpperCase(),
+            hintStyle: GoogleFonts.orbitron(color: isDarkMode ? Colors.white24 : Colors.black26, fontSize: 10),
+            prefixIcon: Icon(Icons.search, color: dynamicCyan),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 15),
+          ),
+        ),
       ),
-      color: isDarkMode ? Colors.grey[850] : Colors.white,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Widget _buildQuickFilters(BuildContext context, Color dynamicCyan, bool isDarkMode, Color textColor) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
         children: [
-          // Doctor info section
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          _buildFilterChip("TOP RATED", true, dynamicCyan, isDarkMode, textColor),
+          _buildFilterChip("NEAREST", false, dynamicCyan, isDarkMode, textColor),
+          _buildFilterChip("AVAILABLE", false, dynamicCyan, isDarkMode, textColor),
+          _buildFilterChip("PRICE: LOW", false, dynamicCyan, isDarkMode, textColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, bool isSelected, Color dynamicCyan, bool isDarkMode, Color textColor) {
+    return Container(
+      margin: const EdgeInsets.only(right: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? dynamicCyan.withOpacity(0.1) : (isDarkMode ? Colors.white.withOpacity(0.02) : Colors.white),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: isSelected ? dynamicCyan : (isDarkMode ? Colors.white10 : Colors.black12)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.orbitron(
+          color: isSelected ? dynamicCyan : (isDarkMode ? Colors.white38 : Colors.black38),
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDoctorList(bool isRTL, Color dynamicCyan, bool isDarkMode, Color textColor) {
+    if (_filteredDoctors.isEmpty) {
+      return Center(
+        child: Text("NO PERSONNEL MATCHING CRITERIA", 
+          style: GoogleFonts.orbitron(color: isDarkMode ? Colors.white24 : Colors.black26, fontSize: 12)),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: _filteredDoctors.length,
+      itemBuilder: (context, index) => _buildDoctorBioCard(_filteredDoctors[index], isRTL, dynamicCyan, isDarkMode, textColor),
+    );
+  }
+
+  Widget _buildDoctorBioCard(Map<String, dynamic> doctor, bool isRTL, Color dynamicCyan, bool isDarkMode, Color textColor) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.white.withOpacity(0.02) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: dynamicCyan.withOpacity(0.1)),
+        boxShadow: isDarkMode ? [] : [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
               children: [
-                // Doctor image
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.blue.shade100,
-                  backgroundImage: doctor['imageUrl'] != null
-                      ? NetworkImage(doctor['imageUrl'])
-                      : null,
-                  child: doctor['imageUrl'] == null
-                      ? Icon(Icons.person, size: 30, color: Colors.blue)
-                      : null,
-                ),
-                SizedBox(width: 12),
-                
-                // Doctor details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Doctor name
-                      Text(
-                        doctor['name'],
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: isDarkMode ? Colors.white : Colors.black,
-                        ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(color: dynamicCyan.withOpacity(0.3)),
+                        image: doctor['imageUrl'] != null
+                            ? DecorationImage(image: NetworkImage(doctor['imageUrl']), fit: BoxFit.cover)
+                            : null,
                       ),
-                      SizedBox(height: 4),
-                      
-                      // Doctor specialty
-                      Text(
-                        doctor['specialty'],
-                        style: TextStyle(
-                          color: isDarkMode ? Colors.white70 : Colors.grey[700],
-                          fontSize: 14,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      
-                      // Rating stars
-                      Row(
+                      child: doctor['imageUrl'] == null
+                          ? Icon(Icons.person, color: dynamicCyan, size: 40)
+                          : null,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ...List.generate(5, (index) {
-                            return Icon(
-                              index < doctor['rating'].floor()
-                                  ? Icons.star
-                                  : index < doctor['rating']
-                                      ? Icons.star_half
-                                      : Icons.star_border,
-                              color: Colors.amber,
-                              size: 18,
-                            );
-                          }),
-                          SizedBox(width: 4),
                           Text(
-                            '${doctor['reviewCount']} ${context.translate('reviews')}',
-                            style: TextStyle(
-                              color: isDarkMode ? Colors.white70 : Colors.grey[600],
-                              fontSize: 12,
+                            doctor['name'].toString().toUpperCase(),
+                            style: GoogleFonts.orbitron(
+                              color: textColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                             ),
+                          ),
+                          Text(
+                            doctor['specialty'].toString().toUpperCase(),
+                            style: GoogleFonts.poppins(color: dynamicCyan, fontSize: 12, fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(Icons.star, color: Colors.amber, size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                doctor['rating'].toString(),
+                                style: GoogleFonts.orbitron(color: textColor, fontSize: 12),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "(${doctor['reviewCount']} REVIEWS)",
+                                style: GoogleFonts.orbitron(color: isDarkMode ? Colors.white24 : Colors.black26, fontSize: 10),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          Divider(height: 1, thickness: 1, color: isDarkMode ? Colors.grey[800] : Colors.grey[200]),
-          
-          // Doctor bio
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.medical_services_outlined,
-                  size: 18,
-                  color: Colors.blue,
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    doctor['bio'],
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDarkMode ? Colors.white70 : Colors.grey[700],
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          
-          // Location
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.location_on_outlined,
-                  size: 18,
-                  color: Colors.red,
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildStat("RATE", "${doctor['price']} EGP", isDarkMode, textColor),
+                    _buildStat("DURATION", "${doctor['appointmentDuration']}M", isDarkMode, textColor),
+                    _buildStat("LOCATION", "CORE-X", isDarkMode, textColor),
+                  ],
                 ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    doctor['location'],
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDarkMode ? Colors.white70 : Colors.grey[700],
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: dynamicCyan,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () {},
+                    child: Text(
+                      "INITIATE SESSION",
+                      style: GoogleFonts.orbitron(fontWeight: FontWeight.bold, letterSpacing: 1),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          
-          // Address
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.map_outlined,
-                  size: 18,
-                  color: Colors.green,
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    doctor['address'],
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDarkMode ? Colors.white70 : Colors.grey[700],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Price
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.attach_money,
-                  size: 18,
-                  color: Colors.amber,
-                ),
-                SizedBox(width: 8),
-                Text(
-                  '${doctor['price']} ${context.translate('currency')}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Appointment duration
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.access_time,
-                  size: 18,
-                  color: Colors.purple,
-                ),
-                SizedBox(width: 8),
-                Text(
-                  '${doctor['appointmentDuration']} ${context.translate('minutes')}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDarkMode ? Colors.white70 : Colors.grey[700],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Book button
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Handle booking
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(context.translate('book_now')),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildStat(String label, String value, bool isDarkMode, Color textColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.orbitron(color: isDarkMode ? Colors.white38 : Colors.black38, fontSize: 8, letterSpacing: 1)),
+        const SizedBox(height: 4),
+        Text(value, style: GoogleFonts.orbitron(color: textColor, fontSize: 11, fontWeight: FontWeight.bold)),
+      ],
     );
   }
 }

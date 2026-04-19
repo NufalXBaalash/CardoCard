@@ -59,12 +59,10 @@ class AppTheme {
         primary: primaryLight,
         secondary: secondaryLight,
         surface: surfaceLight,
-        background: backgroundLight,
         error: errorLight,
         onPrimary: onPrimaryLight,
         onSecondary: onSecondaryLight,
         onSurface: onSurfaceLight,
-        onBackground: onBackgroundLight,
         onError: onErrorLight,
         brightness: Brightness.light,
       ),
@@ -96,17 +94,17 @@ class AppTheme {
         ),
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.resolveWith<Color>((states) {
-          if (states.contains(MaterialState.selected)) {
+        thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.selected)) {
             return primaryLight;
           }
           return Colors.grey;
         }),
-        trackColor: MaterialStateProperty.resolveWith<Color>((states) {
-          if (states.contains(MaterialState.selected)) {
-            return primaryLight.withOpacity(0.5);
+        trackColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return primaryLight.withValues(alpha: 0.5);
           }
-          return Colors.grey.withOpacity(0.5);
+          return Colors.grey.withValues(alpha: 0.5);
         }),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -125,7 +123,7 @@ class AppTheme {
         color: Color(0xFFE0E0E0),
         thickness: 1,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: cardColorLight,
         elevation: 2,
         shadowColor: cardShadowLight,
@@ -154,12 +152,10 @@ class AppTheme {
         primary: primaryDark,
         secondary: secondaryDark,
         surface: surfaceDark,
-        background: backgroundDark,
         error: errorDark,
         onPrimary: onPrimaryDark,
         onSecondary: onSecondaryDark,
         onSurface: onSurfaceDark,
-        onBackground: onBackgroundDark,
         onError: onErrorDark,
         brightness: Brightness.dark,
       ),
@@ -191,17 +187,17 @@ class AppTheme {
         ),
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.resolveWith<Color>((states) {
-          if (states.contains(MaterialState.selected)) {
+        thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.selected)) {
             return primaryDark;
           }
           return Colors.grey;
         }),
-        trackColor: MaterialStateProperty.resolveWith<Color>((states) {
-          if (states.contains(MaterialState.selected)) {
-            return primaryDark.withOpacity(0.5);
+        trackColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return primaryDark.withValues(alpha: 0.5);
           }
-          return Colors.grey.withOpacity(0.5);
+          return Colors.grey.withValues(alpha: 0.5);
         }),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -220,7 +216,7 @@ class AppTheme {
         color: Color(0xFF3E3E3E),
         thickness: 1,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: cardColorDark,
         elevation: 2,
         shadowColor: cardShadowDark,

@@ -226,11 +226,11 @@ class _SplashScreen3State extends State<SplashScreen3>
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         color:
-            isActive ? const Color(0xff5680DC) : Colors.grey.withOpacity(0.3),
+            isActive ? const Color(0xff5680DC) : Colors.grey.withValues(alpha: 0.3),
         boxShadow: isActive
             ? [
                 BoxShadow(
-                  color: const Color(0xff5680DC).withOpacity(0.3),
+                  color: const Color(0xff5680DC).withValues(alpha: 0.3),
                   blurRadius: 4,
                   offset: Offset(0, 2),
                 )
@@ -257,7 +257,7 @@ class _SplashScreen3State extends State<SplashScreen3>
           color: const Color(0xff5680DC),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xff5680DC).withOpacity(0.4),
+              color: const Color(0xff5680DC).withValues(alpha: 0.4),
               blurRadius: 10,
               offset: Offset(0, 4),
             ),

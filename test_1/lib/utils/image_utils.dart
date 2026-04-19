@@ -9,6 +9,17 @@ class ImageUtils {
   static const int _maxCacheSize =
       10; // Maximum number of images to keep in memory
 
+  // Convert base64 string to ImageProvider for use with CircleAvatar or BoxDecoration
+  static ImageProvider imageProviderFromBase64String(String base64String) {
+    try {
+      final imageData = base64Decode(base64String);
+      return MemoryImage(imageData);
+    } catch (e) {
+      debugPrint('Error creating ImageProvider from base64: $e');
+      return const AssetImage("lib/images/default_profile.jpg");
+    }
+  }
+
   // Convert base64 string to Image widget with caching
   static Widget imageFromBase64String(
     String base64String, {

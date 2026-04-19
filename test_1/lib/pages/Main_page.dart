@@ -1,5 +1,7 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:test_1/utils/theme_provider.dart';
 import 'package:test_1/pages/home_page.dart';
 import 'package:test_1/pages/profile_page.dart';
 import 'package:test_1/pages/record_page.dart';
@@ -11,10 +13,14 @@ class MainPage extends StatefulWidget {
   const MainPage({super.key});
 
   @override
-  State<MainPage> createState() => _MainPageState();
+  State<MainPage> createState() => MainPageState();
+
+  // Helper method to find the state from the context
+  static MainPageState? of(BuildContext context) =>
+      context.findAncestorStateOfType<MainPageState>();
 }
 
-class _MainPageState extends State<MainPage> {
+class MainPageState extends State<MainPage> {
   final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   int _selectedIndex = 0;
 
@@ -71,10 +77,18 @@ class _MainPageState extends State<MainPage> {
     await _logCurrentScreen();
   }
 
+  void navigateToTab(int index) {
+    _changePage(index);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+    final bgDark = const Color(0xFF0F0F0F);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDarkMode ? bgDark : Colors.white,
       extendBody: true,
       body: IndexedStack(
         index: _selectedIndex,

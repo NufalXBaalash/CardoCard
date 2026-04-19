@@ -5,66 +5,66 @@ import 'package:flutter/material.dart';
 class Specializations_DB {
   List Categories = [
     {
-      "category": "Heart",
+      "category": "Cardiology",
       "translation_key": "cardiology",
-      "icon": "lib/images/icons8-heartbeat-90.png",
+      "icon": Icons.favorite_rounded,
       "color": Color(0xffFF8484),
     },
     {
-      "category": "Bone",
+      "category": "Orthopedics",
       "translation_key": "orthopedics",
-      "icon": "lib/images/icons8-bone-100.png",
+      "icon": Icons.accessibility_new_rounded,
       "color": Color(0xFFFFD062),
     },
     {
       "category": "Nutrition",
       "translation_key": "nutrition",
-      "icon": "lib/images/icons8-apple-fruit-100.png",
+      "icon": Icons.restaurant_rounded,
       "color": Color(0xFFAEF99D),
     },
     {
-      "category": "Tooth",
+      "category": "Dentistry",
       "translation_key": "dentistry",
-      "icon": "lib/images/icons8-tooth-64.png",
+      "icon": Icons.medical_services_rounded,
       "color": Color(0xFF7EAFFF),
     },
     {
-      "category": "Disease",
-      "translation_key": "disease",
-      "icon": "lib/images/icons8-disease-64.png",
-      "color": Color(0xFFE28BFF),
+      "category": "Pulmonology",
+      "translation_key": "pulmonology",
+      "icon": Icons.air_rounded,
+      "color": Color.fromARGB(255, 255, 143, 124),
     },
     {
-      "category": "Lungs",
-      "translation_key": "pulmonology",
-      "icon": "lib/images/icons8-lung-100.png",
-      "color": Color.fromARGB(255, 255, 143, 124),
+      "category": "Neurology",
+      "translation_key": "neurology",
+      "icon": Icons.psychology_rounded,
+      "color": Color(0xFFE28BFF),
     }
   ];
   List Health_overview = [
     {
       "title": "Blood Type",
       "translation_key": "blood_type",
-      "icon": "lib/images/icons8-drop-of-blood-100.png",
+      "icon": Icons.bloodtype_rounded,
       "description": "",
       "status_color": Color(0xffFF0404),
-      "color": Color(0xffFFF1F2)
+      "color": Color(0xffFF0404)
     },
     {
       "title": "Diabetes",
       "translation_key": "diabetes",
-      "icon": "lib/images/icons8-hypertension-100.png",
+      "icon": Icons.monitor_heart_rounded,
       "description": "",
       "status_color": Color(0xffF87878),
-      "color": Color(0xffF0EFFF)
+      "color": Color(0xff7EAFFF)
     },
     {
       "title": "Asthma",
       "translation_key": "asthma",
-      "icon": "lib/images/icons8-lung-100 (1).png",
+      "icon": Icons.air_rounded,
       "description": "",
       "status_color": Color(0xff78C188),
-      "color": Color(0xffEBF5FF)
+      "color": Color(0xFFE28BFF)
     }
   ];
 

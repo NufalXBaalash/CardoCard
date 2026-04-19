@@ -1,5 +1,8 @@
+import 'dart:ui';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:test_1/utils/theme_provider.dart';
 import 'package:test_1/utils/language_provider.dart';
 import 'package:test_1/utils/app_localizations.dart';
@@ -23,75 +26,13 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
   String? profileImageBase64;
   bool _isLoading = true;
 
-  // Specialties with their icons and colors
   final List<Map<String, dynamic>> _specialties = [
-    {
-      'name': 'Neurologist',
-      'icon': Icons.psychology,
-      'color': Colors.red.shade200,
-    },
-    {
-      'name': 'Cardiologist',
-      'icon': Icons.favorite,
-      'color': Colors.blue.shade200,
-    },
-    {
-      'name': 'Orthopedist',
-      'icon': Icons.accessibility_new,
-      'color': Colors.orange.shade200,
-    },
-    {
-      'name': 'Pulmonologist',
-      'icon': Icons.air,
-      'color': Colors.purple.shade200,
-    },
-    {
-      'name': 'Dentist',
-      'icon': Icons.face,
-      'color': Colors.green.shade200,
-    },
-    {
-      'name': 'Pediatrician',
-      'icon': Icons.child_care,
-      'color': Colors.amber.shade200,
-    },
-  ];
-
-  // Sample upcoming appointment
-  final Map<String, dynamic> _upcomingAppointment = {
-    'doctorName': 'Dr. Jennifer Smith',
-    'specialty': 'Orthopedic Consultation (Foot & Ankle)',
-    'date': 'Wed, 7 Sep 2024',
-    'time': '10:30 - 11:30 AM',
-    'image': 'assets/doctor1.png',
-  };
-
-  // Sample recent doctors
-  final List<Map<String, dynamic>> _recentDoctors = [
-    {
-      'name': 'Dr. Warner',
-      'specialty': 'Neurology',
-      'experience': '5',
-      'image': 'assets/doctor2.png',
-    },
-    {
-      'name': 'Dr. Patel',
-      'specialty': 'Cardiology',
-      'experience': '8',
-      'image': 'assets/doctor3.png',
-    },
-    {
-      'name': 'Dr. Johnson',
-      'specialty': 'Dermatology',
-      'experience': '10',
-      'image': 'assets/doctor4.png',
-    },
-    {
-      'name': 'Dr. Garcia',
-      'specialty': 'Pediatrics',
-      'experience': '7',
-      'image': 'assets/doctor5.png',
-    },
+    {'name': 'Neurologist', 'icon': Icons.psychology, 'color': Color(0xFF4FC3F7), 'key': 'neurology'},
+    {'name': 'Cardiologist', 'icon': Icons.favorite, 'color': Color(0xFFFF5252), 'key': 'cardiologist'},
+    {'name': 'Orthopedist', 'icon': Icons.accessibility_new, 'color': Color(0xFFFFB74D), 'key': 'orthopedics'},
+    {'name': 'Pulmonologist', 'icon': Icons.air, 'color': Color(0xFF9575CD), 'key': 'pulmonology'},
+    {'name': 'Dentist', 'icon': Icons.face, 'color': Color(0xFF81C784), 'key': 'dentistry'},
+    {'name': 'Pediatrician', 'icon': Icons.child_care, 'color': Color(0xFFFFD54F), 'key': 'pediatrician'},
   ];
 
   @override
@@ -101,30 +42,21 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
   }
 
   Future<void> _getUserData() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
       User? currentUser = _auth.currentUser;
       if (currentUser != null) {
-        final userDoc =
-            await _firestore.collection('users').doc(currentUser.uid).get();
-
+        final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
         if (userDoc.exists) {
           setState(() {
             userName = userDoc.data()?['fullName'] ?? 'User';
-            profileImageBase64 = userDoc.data()?['profileImage'];
-            _isLoading = false;
+            profileImageBase64 = userDoc.data()?['profileImageBase64'];
           });
         }
       }
     } catch (e) {
-      print('Error fetching user data: $e');
+      debugPrint('Error fetching user data: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
@@ -132,530 +64,469 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    // Get RTL information
-    final languageProvider = Provider.of<LanguageProvider>(context);
-    final isRTL = languageProvider.isRTL;
-
-    // Get screen size for responsive layout
-    final screenSize = MediaQuery.of(context).size;
-    final isSmallScreen = screenSize.width < 360;
+    
+    // Theme aware colors
+    final biotechCyan = const Color(0xFF00E5FF);
+    final biotechCyanDeep = const Color(0xFF00B8D4); // WCAG-compliant for Light Mode
+    final dynamicCyan = isDarkMode ? biotechCyan : biotechCyanDeep;
+    
+    final scaffoldBg = isDarkMode ? const Color(0xFF0F0F0F) : const Color(0xFFF5F7FA);
+    final cardBg = isDarkMode ? Colors.white.withOpacity(0.03) : Colors.white;
+    final textColor = isDarkMode ? Colors.white : const Color(0xFF0F0F0F);
+    final subTextColor = isDarkMode ? Colors.white70 : Colors.black87;
+    final borderColor = isDarkMode ? Colors.white.withOpacity(0.1) : dynamicCyan.withOpacity(0.2);
 
     return Scaffold(
-      backgroundColor: isDarkMode ? Colors.grey.shade900 : Colors.grey.shade50,
+      backgroundColor: scaffoldBg,
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: colorScheme.primary))
-          : SafeArea(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(
-                    horizontal: isSmallScreen ? 12 : 16,
-                    vertical: isSmallScreen ? 16 : 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header with greeting and profile
-                    _buildHeader(isDarkMode, colorScheme, isSmallScreen),
-
-                    SizedBox(height: isSmallScreen ? 16 : 24),
-
-                    // Search bar
-                    _buildSearchBar(isDarkMode, colorScheme),
-
-                    SizedBox(height: isSmallScreen ? 16 : 24),
-
-                    // Specialties row (scrollable)
-                    _buildSpecialtiesRow(isDarkMode, colorScheme),
-
-                    SizedBox(height: isSmallScreen ? 20 : 30),
-
-                    // Upcoming appointment section
-                    _buildSectionTitle(
-                        context.tr.translate("upcoming_appointments"),
-                        isDarkMode),
-                    SizedBox(height: isSmallScreen ? 8 : 12),
-                    _buildUpcomingAppointmentCard(
-                        isDarkMode, colorScheme, screenSize),
-
-                    SizedBox(height: isSmallScreen ? 20 : 30),
-
-                    // Recent visits section
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ? Center(child: CircularProgressIndicator(color: dynamicCyan))
+          : Stack(
+              children: [
+                // Background Glow (Subtle)
+                Positioned(
+                  top: -50,
+                  left: -50,
+                  child: Container(
+                    width: 250,
+                    height: 250,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: dynamicCyan.withOpacity(isDarkMode ? 0.05 : 0.08),
+                    ),
+                  ),
+                ),
+                SafeArea(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSectionTitle(
-                            context.tr.translate("make_an_appointment"),
-                            isDarkMode),
-                        TextButton(
-                          onPressed: () {
-                            // Navigate to all recent visits
-                          },
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const DoctorListingPage(),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              context.tr.translate('see_all'),
-                              style: TextStyle(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
+                        _buildHeader(dynamicCyan, textColor, subTextColor, isDarkMode),
+                        const SizedBox(height: 25),
+                        _buildSearchBar(dynamicCyan, cardBg, borderColor, isDarkMode),
+                        const SizedBox(height: 30),
+                        _buildSectionTitle(context.translate('specialties').toUpperCase(), dynamicCyan, textColor),
+                        const SizedBox(height: 15),
+                        _buildSpecialtiesGrid(dynamicCyan, cardBg, borderColor, textColor, isDarkMode),
+                        const SizedBox(height: 35),
+                        _buildSectionTitle(context.translate('upcoming_appointment').toUpperCase(), dynamicCyan, textColor),
+                        const SizedBox(height: 15),
+                        _buildGlassAppointmentCard(dynamicCyan, isDarkMode, textColor, subTextColor),
+                        const SizedBox(height: 35),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildSectionTitle(context.translate('top_specialists').toUpperCase(), dynamicCyan, textColor),
+                            TextButton(
+                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const DoctorListingPage())),
+                              child: Text(context.translate('see_all').toUpperCase(), 
+                                style: GoogleFonts.orbitron(color: dynamicCyan, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
                             ),
-                          ),
+                          ],
                         ),
+                        const SizedBox(height: 10),
+                        _buildRecentDoctorsScroll(dynamicCyan, cardBg, borderColor, textColor, subTextColor, isDarkMode),
+                        const SizedBox(height: 100),
                       ],
                     ),
-                    SizedBox(height: isSmallScreen ? 8 : 12),
-                    _buildRecentDoctorsGrid(
-                        isDarkMode, colorScheme, screenSize),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
     );
   }
 
-  Widget _buildHeader(
-      bool isDarkMode, ColorScheme colorScheme, bool isSmallScreen) {
+  Widget _buildHeader(Color primary, Color text, Color subText, bool isDark) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                context.tr.translate("hello"),
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 20 : 24,
-                  fontWeight: FontWeight.w500,
-                  color: isDarkMode ? Colors.white70 : Colors.black54,
-                ),
-              ),
-              Text(
-                userName,
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 20 : 24,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white : Colors.black,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                maxLines: 1,
-              ),
-            ],
-          ),
-        ),
-        Row(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.grey.shade800 : Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                icon: Icon(
-                  Icons.notifications_outlined,
-                  color: isDarkMode ? Colors.white70 : Colors.black54,
-                  size: isSmallScreen ? 20 : 24,
-                ),
-                onPressed: () {
-                  // Handle notification
-                },
-                constraints: BoxConstraints(
-                  minWidth: isSmallScreen ? 36 : 40,
-                  minHeight: isSmallScreen ? 36 : 40,
-                ),
-              ),
+            Text('BIO-ID SYSTEM ACTIVE', 
+              style: GoogleFonts.orbitron(
+                color: primary.withOpacity(0.8), 
+                fontSize: 10, 
+                letterSpacing: 2,
+                fontWeight: FontWeight.bold
+              )
             ),
-            SizedBox(width: isSmallScreen ? 8 : 12),
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: isSmallScreen ? 20 : 24,
-                  backgroundColor: colorScheme.primary.withOpacity(0.2),
-                  backgroundImage: profileImageBase64 != null
-                      ? MemoryImage(
-                          Uri.parse(profileImageBase64!).data!.contentAsBytes())
-                      : null,
-                  child: profileImageBase64 == null
-                      ? Icon(Icons.person,
-                          color: colorScheme.primary,
-                          size: isSmallScreen ? 20 : 24)
-                      : null,
-                ),
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    padding: EdgeInsets.all(isSmallScreen ? 3 : 4),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      'PRO',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: isSmallScreen ? 6 : 8,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 4),
+            Text(userName.toUpperCase(), 
+              style: GoogleFonts.orbitron(
+                color: text, 
+                fontSize: 22, 
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1
+              )
             ),
           ],
         ),
+        Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: primary.withOpacity(0.5), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: primary.withOpacity(0.2), 
+                blurRadius: 15,
+                spreadRadius: 2
+              )
+            ],
+          ),
+          child: CircleAvatar(
+            radius: 28,
+            backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+            backgroundImage: profileImageBase64 != null && profileImageBase64!.isNotEmpty
+              ? MemoryImage(base64Decode(profileImageBase64!)) 
+              : const AssetImage("lib/images/06a2fecd0ffb295fe3f53cba33b95b26.jpg") as ImageProvider,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildSearchBar(bool isDarkMode, ColorScheme colorScheme) {
+  Widget _buildSearchBar(Color primary, Color bg, Color border, bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        color: isDarkMode ? Colors.grey.shade800 : Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Icon(
-            Icons.search,
-            color: isDarkMode ? Colors.white54 : Colors.black38,
+      child: TextField(
+        style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black, fontSize: 14),
+        decoration: InputDecoration(
+          hintText: 'SEARCH CLINIC OR DOCTOR...',
+          hintStyle: GoogleFonts.orbitron(
+            color: isDark ? Colors.white24 : Colors.black26, 
+            fontSize: 10, 
+            letterSpacing: 1.5
           ),
-          const SizedBox(width: 12),
-          Text(
-            context.tr.translate('search_doctor'),
-            style: TextStyle(
-              color: isDarkMode ? Colors.white38 : Colors.black38,
-              fontSize: 16,
-            ),
-          ),
-        ],
+          prefixIcon: Icon(Icons.search_rounded, color: primary, size: 22),
+          suffixIcon: Icon(Icons.tune_rounded, color: primary.withOpacity(0.6), size: 20),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        ),
       ),
     );
   }
 
-  Widget _buildSpecialtiesRow(bool isDarkMode, ColorScheme colorScheme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildSectionTitle(String title, Color primary, Color text) {
+    return Row(
       children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _buildSectionTitle(
-              context.tr.translate("specialities"), isDarkMode),
+        Container(
+          width: 4, 
+          height: 18, 
+          decoration: BoxDecoration(
+            color: primary,
+            borderRadius: BorderRadius.circular(2),
+            boxShadow: [BoxShadow(color: primary.withOpacity(0.5), blurRadius: 8)]
+          ),
         ),
-        SizedBox(
-          height: 100, // Fixed height for the scrollable row
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: _specialties.length,
-            itemBuilder: (context, index) {
-              final specialty = _specialties[index];
-              return Container(
-                width: 80,
-                margin: EdgeInsets.only(right: 16),
-                child: Column(
+        const SizedBox(width: 12),
+        Text(title, style: GoogleFonts.orbitron(color: text, fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.5)),
+      ],
+    );
+  }
+
+  Widget _buildSpecialtiesGrid(Color primary, Color bg, Color border, Color text, bool isDark) {
+    return SizedBox(
+      height: 120,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: _specialties.length,
+        itemBuilder: (context, index) {
+          final s = _specialties[index];
+          return Container(
+            width: 100,
+            margin: const EdgeInsets.only(right: 15, bottom: 5),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ]
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: (s['color'] as Color).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(s['icon'], color: s['color'], size: 26),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  context.translate(s['key']).toUpperCase(), 
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.orbitron(
+                    fontSize: 8, 
+                    color: text.withOpacity(0.8), 
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5
+                  )
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildGlassAppointmentCard(Color primary, bool isDark, Color text, Color subText) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark 
+            ? [primary.withOpacity(0.15), primary.withOpacity(0.05)]
+            : [primary.withOpacity(0.1), Colors.white],
+        ),
+        border: Border.all(color: primary.withOpacity(0.3), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: primary.withOpacity(0.1),
+            blurRadius: 25,
+            spreadRadius: -5,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                Row(
                   children: [
                     Container(
-                      width: 60,
-                      height: 60,
+                      width: 60, height: 60,
                       decoration: BoxDecoration(
-                        color: specialty['color'],
-                        shape: BoxShape.circle,
+                        color: primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: primary.withOpacity(0.2)),
                       ),
-                      child: Icon(
-                        specialty['icon'],
-                        color: Colors.white,
-                        size: 30,
-                      ),
+                      child: Icon(Icons.medical_information_rounded, color: primary, size: 30),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      context.tr.translate(
-                          specialty['name'].toString().toLowerCase()),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: isDarkMode ? Colors.white70 : Colors.black87,
-                      ),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSectionTitle(String title, bool isDarkMode) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: isDarkMode ? Colors.white : Colors.black,
-      ),
-    );
-  }
-
-  Widget _buildUpcomingAppointmentCard(
-      bool isDarkMode, ColorScheme colorScheme, Size screenSize) {
-    final isSmallScreen = screenSize.width < 360;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.primary,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.primary.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: isSmallScreen ? 24 : 30,
-            backgroundColor: Colors.white.withOpacity(0.2),
-            child: Icon(
-              Icons.person,
-              color: Colors.white,
-              size: isSmallScreen ? 28 : 36,
-            ),
-          ),
-          SizedBox(width: isSmallScreen ? 12 : 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _upcomingAppointment['doctorName'],
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 16 : 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: isSmallScreen ? 2 : 4),
-                Text(
-                  context.tr.translate(_upcomingAppointment['specialty']),
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 12 : 14,
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: isSmallScreen ? 8 : 12),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today,
-                      color: Colors.white.withOpacity(0.9),
-                      size: isSmallScreen ? 14 : 16,
-                    ),
-                    SizedBox(width: isSmallScreen ? 6 : 8),
+                    const SizedBox(width: 18),
                     Expanded(
-                      child: Text(
-                        context.tr.translate(_upcomingAppointment['date']),
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 12 : 14,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('DR. JENNIFER SMITH', 
+                            style: GoogleFonts.orbitron(
+                              color: text, 
+                              fontWeight: FontWeight.bold, 
+                              fontSize: 16,
+                              letterSpacing: 0.5
+                            )
+                          ),
+                          const SizedBox(height: 4),
+                          Text('ORTHOPEDIC SPECIALIST', 
+                            style: GoogleFonts.poppins(
+                              color: isDark ? primary.withOpacity(0.8) : primary,
+                              fontSize: 11, 
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1
+                            )
+                          ),
+                        ],
                       ),
                     ),
+                    _buildPulseIndicator(primary),
                   ],
                 ),
-                SizedBox(height: isSmallScreen ? 2 : 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.access_time,
-                      color: Colors.white.withOpacity(0.9),
-                      size: isSmallScreen ? 14 : 16,
-                    ),
-                    SizedBox(width: isSmallScreen ? 6 : 8),
-                    Text(
-                      context.tr.translate(_upcomingAppointment['time']),
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 12 : 14,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 25),
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.black.withOpacity(0.2) : Colors.white.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: primary.withOpacity(0.1)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildIconInfo(Icons.calendar_today_rounded, '07 SEP', primary, text),
+                      Container(width: 1, height: 24, color: primary.withOpacity(0.2)),
+                      _buildIconInfo(Icons.access_time_filled_rounded, '10:30 AM', primary, text),
+                      Container(width: 1, height: 24, color: primary.withOpacity(0.2)),
+                      _buildIconInfo(Icons.location_on_rounded, 'UNIT-4', primary, text),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPulseIndicator(Color primary) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: primary.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6, height: 6,
+            decoration: BoxDecoration(color: primary, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text('LIVE', style: GoogleFonts.orbitron(color: primary, fontSize: 9, fontWeight: FontWeight.w900)),
         ],
       ),
     );
   }
 
-  Widget _buildRecentDoctorsGrid(
-      bool isDarkMode, ColorScheme colorScheme, Size screenSize) {
-    final isSmallScreen = screenSize.width < 360;
+  Widget _buildIconInfo(IconData icon, String text, Color primary, Color textColor) {
+    return Column(
+      children: [
+        Icon(icon, color: primary, size: 20),
+        const SizedBox(height: 6),
+        Text(text, style: GoogleFonts.orbitron(color: textColor, fontSize: 10, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
 
+  Widget _buildRecentDoctorsScroll(Color primary, Color bg, Color border, Color text, Color subText, bool isDark) {
     return SizedBox(
-      height: isSmallScreen ? 180 : 200,
+      height: 200,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: _recentDoctors.length,
+        physics: const BouncingScrollPhysics(),
+        itemCount: 4,
         itemBuilder: (context, index) {
-          final doctor = _recentDoctors[index];
           return Container(
-            width: screenSize.width * 0.7,
-            margin: EdgeInsets.only(right: 12),
-            child: Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              color: isDarkMode ? Colors.grey.shade800 : Colors.white,
-              child: Padding(
-                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: isSmallScreen ? 20 : 24,
-                          backgroundColor: colorScheme.primary.withOpacity(0.1),
-                          child: const Icon(
-                            Icons.person,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        SizedBox(width: isSmallScreen ? 8 : 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                doctor['name'],
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 14 : 16,
-                                  fontWeight: FontWeight.bold,
-                                  color:
-                                      isDarkMode ? Colors.white : Colors.black,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                context.tr.translate(doctor['specialty']
-                                    .toString()
-                                    .toLowerCase()),
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 12 : 14,
-                                  color: isDarkMode
-                                      ? Colors.white70
-                                      : Colors.black54,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                "${context.tr.translate("years_of_experience")} " +
-                                    doctor['experience'],
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 10 : 12,
-                                  color: isDarkMode
-                                      ? Colors.white54
-                                      : Colors.black45,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    Spacer(),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              // Book appointment
-                            },
-                            icon: Icon(
-                              Icons.calendar_today,
-                              size: isSmallScreen ? 14 : 16,
-                              color: colorScheme.primary,
-                            ),
-                            label: Text(
-                              context.tr.translate('book_now'),
-                              style: TextStyle(
-                                color: colorScheme.primary,
-                                fontSize: isSmallScreen ? 12 : 14,
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: colorScheme.primary),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: EdgeInsets.symmetric(
-                                  vertical: isSmallScreen ? 6 : 8),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary.withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              Icons.phone,
-                              color: colorScheme.primary,
-                              size: isSmallScreen ? 18 : 20,
-                            ),
-                            onPressed: () {
-                              // Call doctor
-                            },
-                            constraints: BoxConstraints(
-                              minWidth: isSmallScreen ? 32 : 36,
-                              minHeight: isSmallScreen ? 32 : 36,
-                            ),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+            width: 280,
+            margin: const EdgeInsets.only(right: 18, bottom: 10, top: 5),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
                 ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: primary.withOpacity(0.3)),
+                        ),
+                        child: CircleAvatar(
+                          radius: 24,
+                          backgroundColor: primary.withOpacity(0.05),
+                          child: Icon(Icons.person_rounded, color: primary, size: 28)
+                        ),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('DR. ALEX WARNER', 
+                              style: GoogleFonts.orbitron(
+                                color: text, 
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                letterSpacing: 0.5
+                              )
+                            ),
+                            Text('NEUROLOGY • 12Y EXP', 
+                              style: GoogleFonts.poppins(
+                                color: isDark ? primary.withOpacity(0.7) : primary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700
+                              )
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 45,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            gradient: LinearGradient(colors: [primary, primary.withOpacity(0.8)]),
+                            boxShadow: [BoxShadow(color: primary.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))]
+                          ),
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            onPressed: () {},
+                            child: Text('INITIATE SCHEDULE', 
+                              style: GoogleFonts.orbitron(
+                                fontSize: 10, 
+                                color: Colors.black,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1
+                              )
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        width: 45, height: 45,
+                        decoration: BoxDecoration(
+                          color: primary.withOpacity(0.1),
+                          border: Border.all(color: primary.withOpacity(0.2)), 
+                          borderRadius: BorderRadius.circular(14)
+                        ),
+                        child: Icon(Icons.message_rounded, color: primary, size: 20),
+                      )
+                    ],
+                  )
+                ],
               ),
             ),
           );

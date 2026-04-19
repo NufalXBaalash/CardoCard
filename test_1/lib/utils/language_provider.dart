@@ -173,7 +173,10 @@ class LanguageProvider with ChangeNotifier {
 
       // Method 5: Try immediate location check if we have permissions already
       // Note: This won't prompt for permissions during startup to avoid disrupting UX
-      final locationPermission = await Geolocator.checkPermission();
+      final locationPermission = await Geolocator.checkPermission().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => LocationPermission.denied,
+      );
       if (locationPermission == LocationPermission.whileInUse ||
           locationPermission == LocationPermission.always) {
         final countryCode = await _getCountryFromLocation(forceCheck: false);

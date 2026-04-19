@@ -1,5 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:test_1/utils/theme_provider.dart';
 
 class BottomNavBar extends StatelessWidget {
@@ -16,77 +18,77 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    
+    final primaryCyan = const Color(0xFF00E5FF);
+    final bgDark = const Color(0xFF0F0F0F);
+    
+    // In "Bio-Tech" style, we might want a dark nav bar even in light mode, 
+    // but the user complained about inconsistency. 
+    // Let's make it theme-aware but styled.
+    final Color navBg = isDarkMode ? bgDark.withOpacity(0.8) : Colors.white.withOpacity(0.8);
+    final Color borderColor = isDarkMode ? primaryCyan.withOpacity(0.2) : Colors.grey.withOpacity(0.2);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        boxShadow: [
-          if (!isDarkMode)
+    return Padding(
+      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+      child: Container(
+        height: 70,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: borderColor),
+          boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
+              color: isDarkMode ? Colors.black.withOpacity(0.5) : Colors.grey.withOpacity(0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
-        ],
-        border: Border(
-          top: BorderSide(
-            color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
-            width: isDarkMode ? 0.5 : 1,
-          ),
+          ],
         ),
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Directionality(
-            // Force LTR direction to maintain same order in all languages
-            textDirection: TextDirection.ltr,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavItem(
-                  icon: Icons.home_outlined,
-                  activeIcon: Icons.home,
-                  isActive: currentIndex == 0,
-                  label: 'Home',
-                  onTap: () => onTap(0),
-                  isDarkMode: isDarkMode,
-                ),
-                _NavItem(
-                  icon: Icons.timelapse_outlined,
-                  activeIcon: Icons.timelapse,
-                  isActive: currentIndex == 1,
-                  label: 'Reminder',
-                  onTap: () => onTap(1),
-                  isDarkMode: isDarkMode,
-                ),
-                _NavItem(
-                  icon: Icons.calendar_today_outlined,
-                  activeIcon: Icons.calendar_today,
-                  isActive: currentIndex == 2,
-                  label: 'Records',
-                  onTap: () => onTap(2),
-                  isDarkMode: isDarkMode,
-                ),
-                _NavItem(
-                  icon: Icons.medical_services_outlined,
-                  activeIcon: Icons.medical_services,
-                  isActive: currentIndex == 3,
-                  label: 'Appointments',
-                  onTap: () => onTap(3),
-                  isDarkMode: isDarkMode,
-                ),
-                _NavItem(
-                  icon: Icons.person_outlined,
-                  activeIcon: Icons.person,
-                  isActive: currentIndex == 4,
-                  label: 'Profile',
-                  onTap: () => onTap(4),
-                  isDarkMode: isDarkMode,
-                ),
-              ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              color: navBg,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _NavItem(
+                    icon: Icons.grid_view_rounded,
+                    isActive: currentIndex == 0,
+                    onTap: () => onTap(0),
+                    primaryCyan: primaryCyan,
+                    isDarkMode: isDarkMode,
+                  ),
+                  _NavItem(
+                    icon: Icons.alarm_rounded,
+                    isActive: currentIndex == 1,
+                    onTap: () => onTap(1),
+                    primaryCyan: primaryCyan,
+                    isDarkMode: isDarkMode,
+                  ),
+                  _NavItem(
+                    icon: Icons.folder_copy_rounded,
+                    isActive: currentIndex == 2,
+                    onTap: () => onTap(2),
+                    primaryCyan: primaryCyan,
+                    isDarkMode: isDarkMode,
+                  ),
+                  _NavItem(
+                    icon: Icons.calendar_month_rounded,
+                    isActive: currentIndex == 3,
+                    onTap: () => onTap(3),
+                    primaryCyan: primaryCyan,
+                    isDarkMode: isDarkMode,
+                  ),
+                  _NavItem(
+                    icon: Icons.person_rounded,
+                    isActive: currentIndex == 4,
+                    onTap: () => onTap(4),
+                    primaryCyan: primaryCyan,
+                    isDarkMode: isDarkMode,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -97,58 +99,63 @@ class BottomNavBar extends StatelessWidget {
 
 class _NavItem extends StatelessWidget {
   final IconData icon;
-  final IconData activeIcon;
   final bool isActive;
-  final String label;
   final VoidCallback onTap;
+  final Color primaryCyan;
   final bool isDarkMode;
 
   const _NavItem({
     required this.icon,
-    required this.activeIcon,
     required this.isActive,
-    required this.label,
     required this.onTap,
+    required this.primaryCyan,
     required this.isDarkMode,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Use CardoBlue for consistency with the rest of the app
-    final Color activeColor = AppTheme.cardoBlue;
-    final Color inactiveColor =
-        isDarkMode ? Colors.grey[500]! : Colors.grey[600]!;
+    final activeColor = primaryCyan;
+    final inactiveColor = isDarkMode ? Colors.white38 : Colors.black38;
 
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: isActive
-              ? activeColor.withOpacity(isDarkMode ? 0.15 : 0.1)
-              : Colors.transparent,
+          color: isActive ? activeColor.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(15),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              isActive ? activeIcon : icon,
+              icon,
               color: isActive ? activeColor : inactiveColor,
-              size: 24,
+              size: 26,
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                color: isActive ? activeColor : inactiveColor,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+            if (isActive)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                height: 4,
+                width: 4,
+                decoration: BoxDecoration(
+                  color: activeColor,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: activeColor.withOpacity(0.8),
+                      blurRadius: 4,
+                      spreadRadius: 1,
+                    )
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 }
+

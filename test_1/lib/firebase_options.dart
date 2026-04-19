@@ -41,7 +41,7 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions web = FirebaseOptions(
+  static  FirebaseOptions web = FirebaseOptions(
     apiKey: api_key,
     appId: '1:995451039078:web:766e565ad7e025b7cf6ca7',
     messagingSenderId: '995451039078',
@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
     measurementId: 'G-ST5C4WYJNV',
   );
 
-  static const FirebaseOptions android = FirebaseOptions(
+  static FirebaseOptions android = FirebaseOptions(
     apiKey: api_key,
     appId: '1:995451039078:android:1a946693fa07330ecf6ca7',
     messagingSenderId: '995451039078',
@@ -59,7 +59,7 @@ class DefaultFirebaseOptions {
     storageBucket: 'test-exe-54f88.firebasestorage.app',
   );
 
-  static const FirebaseOptions ios = FirebaseOptions(
+  static FirebaseOptions ios = FirebaseOptions(
     apiKey: api_key,
     appId: '1:995451039078:ios:0b709ed0b3da599ecf6ca7',
     messagingSenderId: '995451039078',
@@ -68,7 +68,7 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.example.test1',
   );
 
-  static const FirebaseOptions macos = FirebaseOptions(
+  static FirebaseOptions macos = FirebaseOptions(
     apiKey: api_key,
     appId: '1:995451039078:ios:0b709ed0b3da599ecf6ca7',
     messagingSenderId: '995451039078',
@@ -77,7 +77,7 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.example.test1',
   );
 
-  static const FirebaseOptions windows = FirebaseOptions(
+  static FirebaseOptions windows = FirebaseOptions(
     apiKey: api_key,
     appId: '1:995451039078:web:3de10a030b055ea1cf6ca7',
     messagingSenderId: '995451039078',

@@ -2,6 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:nfc_manager/nfc_manager.dart';
+import 'package:nfc_manager/nfc_manager_android.dart';
+import 'package:nfc_manager/ndef_record.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 
 void main() {
   runApp(const NfcTest());
@@ -29,8 +33,8 @@ class _NFCReaderState extends State<NFCReader> {
   String _nfcData = "Scan an NFC tag...";
 
   Future<void> _readNfc() async {
-    bool isAvailable = await NfcManager.instance.isAvailable();
-    if (!isAvailable) {
+    NfcAvailability availability = await NfcManager.instance.checkAvailability();
+    if (availability != NfcAvailability.enabled) {
       setState(() {
         _nfcData = "NFC is not available on this device.";
       });
@@ -38,9 +42,27 @@ class _NFCReaderState extends State<NFCReader> {
     }
 
     NfcManager.instance.startSession(
+      pollingOptions: {
+        NfcPollingOption.iso14443,
+        NfcPollingOption.iso15693,
+      },
       onDiscovered: (NfcTag tag) async {
         setState(() {
-          _nfcData = tag.data.toString();
+          // In nfc_manager 4.x, we access tech-specific data through their respective classes
+          // tag.data is protected, so we use NdefAndroid.from(tag) (or NdefIos for iOS)
+          final ndef = NdefAndroid.from(tag);
+          
+          if (ndef != null && ndef.cachedNdefMessage != null) {
+            final records = ndef.cachedNdefMessage!.records;
+            if (records.isNotEmpty) {
+              _nfcData = "NDEF Record found";
+            } else {
+              _nfcData = "No NDEF records";
+            }
+          } else {
+            // Fallback to raw data if needed, but handled via tech classes
+            _nfcData = "Tag discovered";
+          }
         });
 
         NfcManager.instance.stopSession();
@@ -50,14 +72,18 @@ class _NFCReaderState extends State<NFCReader> {
 // ----------------------------------------------------------------
 
   Future<void> _writeNfc() async {
-    bool isAvailable = await NfcManager.instance.isAvailable();
-    if (!isAvailable) {
+    NfcAvailability availability = await NfcManager.instance.checkAvailability();
+    if (availability != NfcAvailability.enabled) {
       return;
     }
 
     NfcManager.instance.startSession(
+      pollingOptions: {
+        NfcPollingOption.iso14443,
+        NfcPollingOption.iso15693,
+      },
       onDiscovered: (NfcTag tag) async {
-        Ndef? ndef = Ndef.from(tag);
+        final ndef = NdefAndroid.from(tag);
         if (ndef == null || !ndef.isWritable) {
           setState(() {
             _nfcData = "This tag is not writable.";
@@ -65,11 +91,11 @@ class _NFCReaderState extends State<NFCReader> {
           return;
         }
 
-        NdefMessage message = NdefMessage([
-          NdefRecord.createText("Hello NFC!"),
+        NdefMessage message = NdefMessage(records: [
+          NdefRecord.text(text: 'Hello NFC!'),
         ]);
 
-        await ndef.write(message);
+        await ndef.writeNdefMessage(message);
         setState(() {
           _nfcData = "Successfully written!";
         });

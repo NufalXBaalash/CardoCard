@@ -1,11 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:test_1/database/DB.dart';
 import 'package:provider/provider.dart';
 import 'package:test_1/utils/theme_provider.dart';
 import 'package:test_1/utils/language_provider.dart';
 import 'package:test_1/utils/app_localizations.dart';
-
-import '../database/DB.dart';
 
 class SpecialityPage extends StatefulWidget {
   final String specialtyName;
@@ -18,483 +18,340 @@ class SpecialityPage extends StatefulWidget {
 class _SpecialityPageState extends State<SpecialityPage> {
   Specializations_DB db = Specializations_DB();
 
-  List<Map<String, dynamic>> get filteredDoctors {
-    // Get the specialty name/key from the widget
-    final String specialtyNameOrKey = widget.specialtyName;
+  // Bio-Tech Colors
+  static const Color biotechBlack = Color(0xFF0F0F0F);
+  static const Color biotechCyan = Color(0xFF00E5FF);
+  static const Color biotechCyanDeep = Color(0xFF00B8D4); // WCAG-compliant for Light Mode
 
-    // First try to find doctors by specialty_key
+  List<Map<String, dynamic>> get filteredDoctors {
+    final String specialtyNameOrKey = widget.specialtyName;
     var doctors = db.doctors
         .where((doctor) =>
             context.translate(doctor["specialty_key"] ?? "") ==
             specialtyNameOrKey)
         .toList();
 
-    // If no doctors found, try with the direct specialty name
     if (doctors.isEmpty) {
       doctors = db.doctors
           .where((doctor) => doctor["specialty"] == specialtyNameOrKey)
           .toList();
     }
-
     return doctors;
   }
 
   void _showMedicalRecords(BuildContext context, Map<String, dynamic> doctor) {
+    final isRTL = Provider.of<LanguageProvider>(context, listen: false).isRTL;
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.isDarkMode;
-    final colorScheme = Theme.of(context).colorScheme;
+    final dynamicCyan = isDarkMode ? biotechCyan : biotechCyanDeep;
 
-    // Get RTL information
-    final languageProvider =
-        Provider.of<LanguageProvider>(context, listen: false);
-    final isRTL = languageProvider.isRTL;
+    final sheetBgColor = isDarkMode ? biotechBlack.withOpacity(0.8) : Colors.white.withOpacity(0.9);
+    final headerTextColor = isDarkMode ? Colors.white : biotechBlack;
+    final subTextColor = isDarkMode ? Colors.white70 : Colors.black87;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: colorScheme.background,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.9,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
-          expand: false,
-          builder: (_, scrollController) {
-            return Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Header with title and close button
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.9,
+            decoration: BoxDecoration(
+              color: sheetBgColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+              border: Border.all(color: dynamicCyan.withOpacity(0.3)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 15),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: dynamicCyan.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Row(
                     children: [
-                      Text(
-                        context.translate('medical_records'),
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.cardoBlue,
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: dynamicCyan.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: dynamicCyan.withOpacity(0.3)),
+                        ),
+                        child: Icon(Icons.folder_shared, color: dynamicCyan),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              context.translate('medical_records').toUpperCase(),
+                              style: GoogleFonts.orbitron(
+                                color: dynamicCyan,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                            Text(
+                              isRTL && doctor["name_ar"] != null ? doctor["name_ar"] : doctor["name"],
+                              style: GoogleFonts.poppins(color: subTextColor, fontSize: 14),
+                            ),
+                          ],
                         ),
                       ),
                       IconButton(
-                        icon: Icon(Icons.close, color: colorScheme.onSurface),
+                        icon: Icon(Icons.close, color: isDarkMode ? Colors.white54 : Colors.black54),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],
                   ),
-
-                  // Doctor info section
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color:
-                          isDarkMode ? colorScheme.background : Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: AppTheme.cardoBlue.withOpacity(0.2),
-                          child: Icon(Icons.medical_services,
-                              color: AppTheme.cardoBlue),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isRTL && doctor["name_ar"] != null
-                                    ? doctor["name_ar"]
-                                    : doctor["name"],
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: colorScheme.onSurface,
-                                ),
-                              ),
-                              Text(
-                                isRTL && doctor["organization_ar"] != null
-                                    ? doctor["organization_ar"]
-                                    : doctor["organization"],
-                                style: TextStyle(
-                                  color: isDarkMode
-                                      ? Colors.grey[400]
-                                      : Colors.grey[600],
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: doctor["medicalRecords"].length,
+                    itemBuilder: (context, index) {
+                      final record = doctor["medicalRecords"][index];
+                      return _buildRecordEntry(record, isRTL, isDarkMode, headerTextColor, subTextColor, dynamicCyan);
+                    },
                   ),
-
-                  SizedBox(height: 16),
-
-                  // Records list header
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          context.translate('patient_records'),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
-                          ),
-                        ),
-                        Text(
-                          '${doctor["medicalRecords"].length} ${context.translate('records')}',
-                          style: TextStyle(
-                            color: isDarkMode
-                                ? Colors.grey[500]
-                                : Colors.grey[500],
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(height: 8),
-
-                  // Records list
-                  Expanded(
-                    child: ListView.separated(
-                      controller: scrollController,
-                      itemCount: doctor["medicalRecords"].length,
-                      separatorBuilder: (context, index) =>
-                          SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final record = doctor["medicalRecords"][index];
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: colorScheme.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: isDarkMode
-                                ? Border.all(color: Colors.grey[800]!)
-                                : null,
-                            boxShadow: [
-                              if (!isDarkMode)
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.1),
-                                  blurRadius: 6,
-                                  offset: Offset(0, 2),
-                                ),
-                            ],
-                          ),
-                          child: ExpansionTile(
-                            leading: CircleAvatar(
-                              backgroundColor: isDarkMode
-                                  ? AppTheme.cardoBlue.withOpacity(0.2)
-                                  : Colors.blue[50],
-                              child: Icon(Icons.person,
-                                  size: 20, color: AppTheme.cardoBlue),
-                            ),
-                            title: Text(
-                              isRTL && record["patientName_ar"] != null
-                                  ? record["patientName_ar"]
-                                  : record["patientName"],
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                color: colorScheme.onSurface,
-                              ),
-                            ),
-                            subtitle: Text(
-                              record["date"].toString().split(' ')[0],
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDarkMode
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
-                              ),
-                            ),
-                            iconColor: colorScheme.onSurface,
-                            collapsedIconColor: colorScheme.onSurface,
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    _buildRecordItem(
-                                      context,
-                                      context.translate('diagnosis'),
-                                      record["diagnosis_key"] != null
-                                          ? context.translate(
-                                              record["diagnosis_key"])
-                                          : record["diagnosis"],
-                                    ),
-                                    SizedBox(height: 8),
-                                    _buildRecordItem(
-                                      context,
-                                      context.translate('treatment'),
-                                      record["treatment_key"] != null
-                                          ? context.translate(
-                                              record["treatment_key"])
-                                          : record["treatment"],
-                                    ),
-                                    SizedBox(height: 8),
-                                    _buildRecordItem(
-                                      context,
-                                      context.translate('notes'),
-                                      isRTL && record["notes_ar"] != null
-                                          ? record["notes_ar"]
-                                          : record["notes"],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
   }
 
-  // Helper to build record items with correct alignment for RTL
-  Widget _buildRecordItem(BuildContext context, String label, String value) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
-    final isRTL = Provider.of<LanguageProvider>(context).isRTL;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+  Widget _buildRecordEntry(Map<String, dynamic> record, bool isRTL, bool isDarkMode, Color headerTextColor, Color subTextColor, Color dynamicCyan) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: dynamicCyan.withOpacity(0.1)),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          iconColor: dynamicCyan,
+          collapsedIconColor: isDarkMode ? Colors.white54 : Colors.black54,
+          title: Text(
+            (isRTL && record["patientName_ar"] != null ? record["patientName_ar"] : record["patientName"]).toUpperCase(),
+            style: GoogleFonts.orbitron(color: headerTextColor, fontSize: 14, fontWeight: FontWeight.bold),
           ),
-        ),
-        SizedBox(height: 4),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isDarkMode
-                ? Colors.grey[800]!.withOpacity(0.3)
-                : Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
+          subtitle: Text(
+            record["date"].toString().split(' ')[0],
+            style: GoogleFonts.poppins(color: dynamicCyan, fontSize: 12),
           ),
-          child: Text(
-            value,
-            textAlign: isRTL ? TextAlign.right : TextAlign.left,
-            style: TextStyle(
-              fontSize: 15,
-              color: colorScheme.onSurface,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Column(
+                children: [
+                  _buildProtocolDetail("DIAGNOSIS", 
+                    record["diagnosis_key"] != null ? context.translate(record["diagnosis_key"]) : record["diagnosis"], isDarkMode, subTextColor, dynamicCyan),
+                  const SizedBox(height: 12),
+                  _buildProtocolDetail("TREATMENT", 
+                    record["treatment_key"] != null ? context.translate(record["treatment_key"]) : record["treatment"], isDarkMode, subTextColor, dynamicCyan),
+                  const SizedBox(height: 12),
+                  _buildProtocolDetail("OBSERVATIONS", 
+                    isRTL && record["notes_ar"] != null ? record["notes_ar"] : record["notes"], isDarkMode, subTextColor, dynamicCyan),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildProtocolDetail(String label, String value, bool isDarkMode, Color subTextColor, Color dynamicCyan) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? biotechBlack.withOpacity(0.4) : Colors.white.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: dynamicCyan.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: GoogleFonts.orbitron(color: dynamicCyan, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+          const SizedBox(height: 8),
+          Text(value, style: GoogleFonts.poppins(color: subTextColor, fontSize: 13)),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isRTL = Provider.of<LanguageProvider>(context).isRTL;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final dynamicCyan = isDarkMode ? biotechCyan : biotechCyanDeep;
 
-    // Get RTL information
-    final languageProvider = Provider.of<LanguageProvider>(context);
-    final isRTL = languageProvider.isRTL;
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    final isPortrait =
-        MediaQuery.of(context).orientation == Orientation.portrait;
+    final backgroundColor = isDarkMode ? biotechBlack : const Color(0xFFF5F7FA);
+    final headerTextColor = isDarkMode ? Colors.white : biotechBlack;
+    final appBarColor = isDarkMode ? biotechBlack.withOpacity(0.5) : Colors.white.withOpacity(0.5);
 
     return Directionality(
       textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
+        backgroundColor: backgroundColor,
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          flexibleSpace: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(color: appBarColor),
+            ),
+          ),
           title: Text(
-            widget.specialtyName,
-            style: TextStyle(
-              color: colorScheme.onBackground,
+            widget.specialtyName.toUpperCase(),
+            style: GoogleFonts.orbitron(
+              fontSize: 18,
               fontWeight: FontWeight.bold,
+              color: dynamicCyan,
+              letterSpacing: 2,
             ),
           ),
           leading: IconButton(
-            icon: Icon(
-              isRTL ? Icons.arrow_forward : Icons.arrow_back,
-              color: colorScheme.onBackground,
-            ),
+            icon: Icon(isRTL ? Icons.arrow_forward : Icons.arrow_back, color: dynamicCyan),
             onPressed: () => Navigator.pop(context),
           ),
-          backgroundColor: colorScheme.background,
-          elevation: 0,
           centerTitle: true,
         ),
-        backgroundColor: colorScheme.background,
-        body: filteredDoctors.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.medical_services_outlined,
-                      size: 64,
-                      color: AppTheme.cardoBlue.withOpacity(0.7),
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      context.translate('no_doctors_found'),
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                        color: colorScheme.onBackground,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      context.translate('no_doctors_found_message'),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: colorScheme.onBackground.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
+        body: Stack(
+          children: [
+             Positioned(
+              top: -100,
+              right: -100,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: dynamicCyan.withOpacity(isDarkMode ? 0.05 : 0.1),
                 ),
-              )
-            : ListView.builder(
-                padding: EdgeInsets.all(16),
-                itemCount: filteredDoctors.length,
-                itemBuilder: (context, index) {
-                  final doctor = filteredDoctors[index];
-                  return _buildDoctorCard(context, doctor);
-                },
               ),
+            ),
+            SafeArea(
+              child: filteredDoctors.isEmpty
+                  ? _buildEmptyState(headerTextColor, dynamicCyan)
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(20),
+                      itemCount: filteredDoctors.length,
+                      itemBuilder: (context, index) => _buildDoctorBioCard(filteredDoctors[index], isRTL, isDarkMode, headerTextColor, dynamicCyan),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Container _buildDoctorCard(
-      BuildContext context, Map<String, dynamic> doctor) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.isDarkMode;
-    final colorScheme = Theme.of(context).colorScheme;
+  Widget _buildEmptyState(Color headerTextColor, Color dynamicCyan) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off, size: 80, color: dynamicCyan.withOpacity(0.2)),
+          const SizedBox(height: 20),
+          Text(
+            "NO PERSONNEL FOUND",
+            style: GoogleFonts.orbitron(color: headerTextColor.withOpacity(0.2), letterSpacing: 2),
+          ),
+        ],
+      ),
+    );
+  }
 
-    // Get RTL information
-    final languageProvider = Provider.of<LanguageProvider>(context);
-    final isRTL = languageProvider.isRTL;
-
+  Widget _buildDoctorBioCard(Map<String, dynamic> doctor, bool isRTL, bool isDarkMode, Color headerTextColor, Color dynamicCyan) {
     return Container(
-      margin: EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
+        color: isDarkMode ? Colors.white.withOpacity(0.02) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: dynamicCyan.withOpacity(isDarkMode ? 0.2 : 0.4)),
+        boxShadow: isDarkMode ? [] : [
           BoxShadow(
-            color: isDarkMode
-                ? Colors.black.withOpacity(0.2)
-                : Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: Offset(0, 1),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           )
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _showMedicalRecords(context, doctor),
-          child: Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: AppTheme.cardoBlue.withOpacity(0.15),
-                      child: Icon(
-                        Icons.medical_services,
-                        color: AppTheme.cardoBlue,
-                        size: 20,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: InkWell(
+            onTap: () => _showMedicalRecords(context, doctor),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: dynamicCyan.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(color: dynamicCyan.withOpacity(0.3)),
+                        ),
+                        child: Icon(Icons.medical_services, color: dynamicCyan),
                       ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isRTL && doctor["name_ar"] != null
-                                ? doctor["name_ar"]
-                                : doctor["name"],
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: colorScheme.onSurface,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              (isRTL && doctor["name_ar"] != null ? doctor["name_ar"] : doctor["name"]).toUpperCase(),
+                              style: GoogleFonts.orbitron(
+                                color: headerTextColor,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
+                              ),
                             ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            isRTL && doctor["organization_ar"] != null
-                                ? doctor["organization_ar"]
-                                : doctor["organization"],
-                            style: TextStyle(
-                              color: isDarkMode
-                                  ? Colors.grey[400]
-                                  : Colors.grey[600],
-                              fontSize: 14,
+                            Text(
+                              isRTL && doctor["organization_ar"] != null ? doctor["organization_ar"] : doctor["organization"],
+                              style: GoogleFonts.poppins(color: dynamicCyan, fontSize: 12),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    Icon(
-                      isRTL ? Icons.arrow_back_ios : Icons.arrow_forward_ios,
-                      size: 16,
-                      color: colorScheme.onSurface.withOpacity(0.5),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildBadge(
-                      context,
-                      "${doctor["medicalRecords"].length} ${context.translate('records')}",
-                      AppTheme.cardoBlue.withOpacity(0.1),
-                      AppTheme.cardoBlue,
-                      isDarkMode,
-                    ),
-                    _buildBadge(
-                      context,
-                      context.translate('tap_to_view'),
-                      isDarkMode
-                          ? colorScheme.primary.withOpacity(0.15)
-                          : Colors.grey.shade100,
-                      colorScheme.primary,
-                      isDarkMode,
-                    ),
-                  ],
-                ),
-              ],
+                      Icon(Icons.chevron_right, color: dynamicCyan),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildStat("RECORDS", doctor["medicalRecords"].length.toString(), isDarkMode, headerTextColor, dynamicCyan),
+                      _buildStat("CLEARANCE", "LEVEL 4", isDarkMode, headerTextColor, dynamicCyan),
+                      _buildStat("STATUS", "ACTIVE", isDarkMode, headerTextColor, dynamicCyan),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -502,25 +359,14 @@ class _SpecialityPageState extends State<SpecialityPage> {
     );
   }
 
-  Widget _buildBadge(BuildContext context, String text, Color bgColor,
-      Color textColor, bool isDarkMode) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16),
-        border: isDarkMode
-            ? Border.all(color: textColor.withOpacity(0.3), width: 1)
-            : null,
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 12,
-          color: textColor,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
+  Widget _buildStat(String label, String value, bool isDarkMode, Color headerTextColor, Color dynamicCyan) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.orbitron(color: isDarkMode ? Colors.white38 : Colors.black38, fontSize: 8, letterSpacing: 1)),
+        const SizedBox(height: 4),
+        Text(value, style: GoogleFonts.orbitron(color: dynamicCyan, fontSize: 12, fontWeight: FontWeight.bold)),
+      ],
     );
   }
 }

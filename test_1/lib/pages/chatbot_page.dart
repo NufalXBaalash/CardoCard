@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'dart:ui';
 import 'package:provider/provider.dart';
 import 'package:test_1/utils/theme_provider.dart';
 import 'package:test_1/utils/language_provider.dart';
@@ -298,297 +300,328 @@ class _ChatbotPageState extends State<ChatbotPage> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+
+    // Bio-Tech Colors
+    final biotechCyan = const Color(0xFF00E5FF);
+    final biotechCyanDeep = const Color(0xFF00B8D4);
+    final primaryCyan = isDarkMode ? biotechCyan : biotechCyanDeep;
+
+    final biotechBlack = const Color(0xFF0F0F0F);
+    final backgroundColor = isDarkMode ? biotechBlack : const Color(0xFFF5F7FA);
+    final cardColor = isDarkMode
+        ? Colors.white.withOpacity(0.03)
+        : Colors.white.withOpacity(0.7);
+    final onSurfaceColor = isDarkMode ? Colors.white : biotechBlack;
+    final subTextColor = isDarkMode ? Colors.white70 : Colors.black54;
 
     // Get RTL information
     final languageProvider = Provider.of<LanguageProvider>(context);
     final isRTL = languageProvider.isRTL;
 
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
         centerTitle: true,
         title: Text(
-          context.translate('AI Health Assistant'),
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black,
+          context.translate('AI Health Assistant').toUpperCase(),
+          style: GoogleFonts.orbitron(
+            color: onSurfaceColor,
             fontWeight: FontWeight.bold,
+            fontSize: 14,
+            letterSpacing: 1.5,
           ),
         ),
-        backgroundColor: colorScheme.surface,
-        elevation: 1, // Added slight elevation for better visual separation
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: primaryCyan, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.history_rounded, color: primaryCyan),
+            onPressed: () {
+              // History logic
+            },
+          ),
+        ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          // Selected Content Display Area (when content is selected)
-          if (_selectedContent != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.grey.shade900 : Colors.grey.shade100,
-                border: Border(
-                  bottom: BorderSide(
-                    color: isDarkMode
-                        ? Colors.grey.shade800
-                        : Colors.grey.shade300,
-                    width: 1,
-                  ),
+          // Background Glows
+          if (isDarkMode) ...[
+            Positioned(
+              top: -100,
+              right: -100,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: primaryCyan.withOpacity(0.05),
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "${_selectedContent!['fileName']}",
-                              textDirection: TextDirection.rtl,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: isDarkMode ? Colors.white : Colors.black,
+            ),
+          ],
+
+          Column(
+            children: [
+              // Selected Content Display Area
+              if (_selectedContent != null)
+                ClipRRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: primaryCyan.withOpacity(0.05),
+                        border: Border(
+                          bottom: BorderSide(
+                            color: primaryCyan.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "${_selectedContent!['fileName']}",
+                                      style: GoogleFonts.orbitron(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryCyan,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "PROTOCOL: ${_selectedContent!['dataType']}",
+                                      style: GoogleFonts.orbitron(
+                                        fontSize: 10,
+                                        color: subTextColor.withOpacity(0.5),
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.close_fullscreen_rounded,
+                                    color: onSurfaceColor, size: 20),
+                                onPressed: () => setState(() => _selectedContent = null),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: primaryCyan.withOpacity(0.1)),
+                            ),
+                            child: Text(
+                              "${_selectedContent!['content']}",
+                              style: GoogleFonts.poppins(
+                                color: subTextColor,
+                                fontSize: 13,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+              Expanded(
+                child: _messages.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: primaryCyan.withOpacity(0.2)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: primaryCyan.withOpacity(0.1),
+                                    blurRadius: 30,
+                                  )
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.shield_moon_outlined,
+                                size: 60,
+                                color: primaryCyan,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
                             Text(
-                              "التخصص: ${_selectedContent!['specialty']} • النوع: ${_selectedContent!['dataType']}",
-                              textDirection: TextDirection.rtl,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: isDarkMode
-                                    ? Colors.white70
-                                    : Colors.black54,
+                              "CORE INTELLIGENCE ACTIVE",
+                              style: GoogleFonts.orbitron(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: primaryCyan,
+                                letterSpacing: 2,
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.close,
-                          color: isDarkMode ? Colors.white70 : Colors.black54,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _selectedContent = null;
-                          });
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(20),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final message = _messages[index];
+                          if (message.isOption) {
+                            return _buildOptionButton(message, primaryCyan, cardColor);
+                          } else {
+                            return _buildChatMessage(message, primaryCyan, cardColor, onSurfaceColor, subTextColor);
+                          }
                         },
+                      ),
+              ),
+
+              // Typing Indicator
+              if (_isTyping)
+                Padding(
+                  padding: const EdgeInsets.only(left: 20, bottom: 10),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          color: primaryCyan,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        "ANALYZING PROTOCOLS...",
+                        style: GoogleFonts.orbitron(
+                          color: primaryCyan.withOpacity(0.5),
+                          fontSize: 8,
+                          letterSpacing: 1,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? Colors.grey.shade800 : Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isDarkMode
-                            ? Colors.grey.shade700
-                            : Colors.grey.shade300,
-                      ),
-                    ),
-                    child: Text(
-                      "${_selectedContent!['content']}",
-                      textDirection: TextDirection.rtl,
-                      style: TextStyle(
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
 
-          Expanded(
-            child: _messages.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.health_and_safety_outlined,
-                          size: 80,
-                          color: colorScheme.primary.withOpacity(0.5),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          "👨‍⚕️ مرحبًا بك في نظام رفع بيانات العيادة",
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: isDarkMode ? Colors.white70 : Colors.black54,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+              // Input Area
+              ClipRRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    padding: EdgeInsets.only(
+                      left: 20,
+                      right: 20,
+                      bottom: MediaQuery.of(context).padding.bottom + 10,
+                      top: 10,
                     ),
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _messages.length,
-                    reverse: false,
-                    itemBuilder: (context, index) {
-                      final message = _messages[index];
-                      if (message.isOption) {
-                        return _buildOptionButton(message);
-                      } else if (message.isFileRequest) {
-                        return _buildFileRequestMessage(message);
-                      } else {
-                        return _buildChatMessage(message);
-                      }
-                    },
-                  ),
-          ),
-          if (_isTyping)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isDarkMode
-                          ? Colors.grey.shade800.withOpacity(0.7)
-                          : Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(12),
+                      color: cardColor,
+                      border: Border(top: BorderSide(color: primaryCyan.withOpacity(0.1))),
                     ),
                     child: Row(
                       children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              colorScheme.primary,
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(30),
+                              border: Border.all(color: primaryCyan.withOpacity(0.2)),
+                            ),
+                            child: Row(
+                              children: [
+                                const SizedBox(width: 15),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _messageController,
+                                    style: GoogleFonts.poppins(color: onSurfaceColor, fontSize: 14),
+                                    decoration: InputDecoration(
+                                      hintText: "Enter protocol command...",
+                                      hintStyle: GoogleFonts.orbitron(
+                                        color: subTextColor.withOpacity(0.3),
+                                        fontSize: 10,
+                                      ),
+                                      border: InputBorder.none,
+                                    ),
+                                    onSubmitted: (_) => _sendMessage(),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.attach_file_rounded,
+                                      color: primaryCyan.withOpacity(0.5), size: 20),
+                                  onPressed: () => _addUserMessage("رفع بيانات"),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          "الذكاء الاصطناعي يكتب...",
-                          style: TextStyle(
-                            color: isDarkMode ? Colors.white70 : Colors.black54,
-                            fontStyle: FontStyle.italic,
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: _sendMessage,
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: primaryCyan,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: primaryCyan.withOpacity(0.3),
+                                  blurRadius: 10,
+                                )
+                              ],
+                            ),
+                            child: const Icon(Icons.send_rounded, color: Colors.black, size: 20),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 5,
-                  offset: const Offset(0, -1),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    textDirection: TextDirection.rtl,
-                    decoration: InputDecoration(
-                      hintText: "اكتب رسالتك هنا...",
-                      hintStyle: TextStyle(
-                        color: isDarkMode ? Colors.white60 : Colors.black45,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: isDarkMode
-                          ? Colors.grey.shade800
-                          : Colors.grey.shade200,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          Icons.attachment_outlined,
-                          color: isDarkMode ? Colors.white60 : Colors.black45,
-                        ),
-                        onPressed: () {
-                          _addUserMessage("رفع بيانات");
-                        },
-                      ),
-                    ),
-                    onSubmitted: (_) => _sendMessage(),
-                    keyboardType: TextInputType.text,
-                    textInputAction: TextInputAction.send,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                FloatingActionButton(
-                  onPressed: _sendMessage,
-                  mini: true,
-                  backgroundColor: colorScheme.primary,
-                  elevation: 2,
-                  child: const Icon(
-                    Icons.send,
-                    color: Colors.white,
-                    textDirection: TextDirection.ltr, // Force LTR for send icon
-                  ),
-                ),
-              ],
-            ),
+            ],
           ),
-          // Added bottom padding for nav bar
-          const SizedBox(height: 15),
         ],
       ),
     );
   }
 
-  Widget _buildOptionButton(Message message) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.isDarkMode;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
+  Widget _buildOptionButton(Message message, Color primaryCyan, Color cardColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Align(
         alignment: Alignment.centerRight,
-        child: InkWell(
+        child: GestureDetector(
           onTap: () => _addUserMessage(message.text),
-          borderRadius: BorderRadius.circular(16),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: colorScheme.primary.withOpacity(0.5),
-                width: 1,
-              ),
+              color: primaryCyan.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: primaryCyan.withOpacity(0.3)),
             ),
             child: Text(
               message.text,
-              textDirection: TextDirection.rtl,
-              style: TextStyle(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.w500,
+              style: GoogleFonts.orbitron(
+                color: primaryCyan,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -597,129 +630,82 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
-  Widget _buildFileRequestMessage(Message message) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.isDarkMode;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
+  Widget _buildChatMessage(Message message, Color primaryCyan, Color cardColor, Color onSurfaceColor, Color subTextColor) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment:
+            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
-          CircleAvatar(
-            backgroundColor: colorScheme.primary,
-            radius: 16,
-            child: const Icon(
-              Icons.health_and_safety,
-              size: 16,
-              color: Colors.white,
+          if (!message.isUser)
+            Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: primaryCyan.withOpacity(0.3)),
+              ),
+              child: Icon(Icons.hub_outlined, size: 16, color: primaryCyan),
             ),
-          ),
-          const SizedBox(width: 8),
           Flexible(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(16),
+                color: message.isUser
+                    ? primaryCyan.withOpacity(0.15)
+                    : cardColor,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(message.isUser ? 20 : 0),
+                  bottomRight: Radius.circular(message.isUser ? 0 : 20),
+                ),
+                border: Border.all(
+                  color: message.isUser
+                      ? primaryCyan.withOpacity(0.4)
+                      : primaryCyan.withOpacity(0.1),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    message.text,
-                    textDirection: TextDirection.rtl,
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.white : Colors.black87,
-                    ),
-                  ),
-                  if (message.fileName != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        "الملف: ${message.fileName}",
-                        textDirection: TextDirection.rtl,
-                        style: TextStyle(
-                          color: isDarkMode ? Colors.white70 : Colors.black54,
-                          fontStyle: FontStyle.italic,
-                        ),
+                  if (!message.isUser)
+                    Text(
+                      "SYSTEM",
+                      style: GoogleFonts.orbitron(
+                        fontSize: 8,
+                        color: primaryCyan,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
                       ),
                     ),
+                  if (!message.isUser) const SizedBox(height: 4),
+                  Text(
+                    message.text,
+                    style: GoogleFonts.poppins(
+                      color: onSurfaceColor.withOpacity(0.9),
+                      fontSize: 13,
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChatMessage(Message message) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.isDarkMode;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment:
-            message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!message.isUser)
-            CircleAvatar(
-              backgroundColor: colorScheme.primary,
-              radius: 16,
-              child: const Icon(
-                Icons.health_and_safety,
-                size: 16,
-                color: Colors.white,
-              ),
-            ),
-          if (!message.isUser) const SizedBox(width: 8),
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: message.isUser
-                    ? colorScheme.primary
-                    : isDarkMode
-                        ? Colors.grey.shade800
-                        : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                message.text,
-                textDirection: TextDirection.rtl,
-                style: TextStyle(
-                  color: message.isUser
-                      ? Colors.white
-                      : isDarkMode
-                          ? Colors.white
-                          : Colors.black87,
-                ),
-              ),
-            ),
-          ),
-          if (message.isUser) const SizedBox(width: 8),
           if (message.isUser)
-            CircleAvatar(
-              backgroundColor: Colors.grey.shade300,
-              radius: 16,
-              child: Icon(
-                Icons.person,
-                size: 16,
-                color: isDarkMode ? Colors.black87 : Colors.grey.shade700,
+            Container(
+              margin: const EdgeInsets.only(left: 12),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: primaryCyan,
               ),
+              child: const Icon(Icons.person_outline_rounded, size: 16, color: Colors.black),
             ),
         ],
       ),
     );
   }
+
 }
 
 class Message {

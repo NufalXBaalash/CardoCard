@@ -120,7 +120,7 @@ class _HealthOverviewCardState extends State<HealthOverviewCard>
                       : AppTheme.cardoLightGrey,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(isDarkMode ? 0.1 : 0.08),
+                      color: Colors.black.withValues(alpha: isDarkMode ? 0.1 : 0.08),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -140,11 +140,11 @@ class _HealthOverviewCardState extends State<HealthOverviewCard>
                           borderRadius:
                               BorderRadius.circular(screenWidth * 0.022),
                           color: isDarkMode
-                              ? widget.color.withOpacity(0.8)
+                              ? widget.color.withValues(alpha: 0.8)
                               : widget.color,
                           boxShadow: [
                             BoxShadow(
-                              color: widget.color.withOpacity(0.3),
+                              color: widget.color.withValues(alpha: 0.3),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -195,7 +195,7 @@ class _HealthOverviewCardState extends State<HealthOverviewCard>
                                     fontSize: statusTextSize,
                                     fontWeight: FontWeight.w600,
                                     color: isDarkMode
-                                        ? widget.status_color.withOpacity(0.9)
+                                        ? widget.status_color.withValues(alpha: 0.9)
                                         : widget.status_color,
                                   ),
                                 ),
@@ -213,8 +213,8 @@ class _HealthOverviewCardState extends State<HealthOverviewCard>
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: isDarkMode
-                                  ? Colors.grey.withOpacity(0.2)
-                                  : Colors.grey.withOpacity(0.1),
+                                  ? Colors.grey.withValues(alpha: 0.2)
+                                  : Colors.grey.withValues(alpha: 0.1),
                             ),
                             child: Icon(
                               languageProvider.isRTL
@@ -222,7 +222,7 @@ class _HealthOverviewCardState extends State<HealthOverviewCard>
                                   : Icons.arrow_forward_ios_rounded,
                               color: isDarkMode
                                   ? Colors.grey[400]
-                                  : AppTheme.cardoBlue.withOpacity(0.7),
+                                  : AppTheme.cardoBlue.withValues(alpha: 0.7),
                               size: screenWidth * 0.035,
                             ),
                           ),

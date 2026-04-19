@@ -80,7 +80,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage>
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        backgroundColor: colorScheme.background,
+        backgroundColor: colorScheme.surface,
         body: FadeTransition(
           opacity: _fadeAnimation,
           child: SingleChildScrollView(
@@ -109,7 +109,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage>
                           : context.translate('auto_detect'),
                       style: GoogleFonts.lexend(
                         fontSize: screenWidth * 0.035,
-                        color: colorScheme.onSurface.withOpacity(0.7),
+                        color: colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                     value: languageProvider.isAutoDetect,
@@ -120,7 +120,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage>
                     secondary: Container(
                       padding: EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer.withOpacity(0.3),
+                        color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -139,7 +139,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage>
                   style: GoogleFonts.lexend(
                     fontSize: screenWidth * 0.04,
                     fontWeight: FontWeight.bold,
-                    color: colorScheme.onBackground,
+                    color: colorScheme.onSurface,
                   ),
                 ),
 
@@ -180,10 +180,10 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage>
                 Container(
                   padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer.withOpacity(0.1),
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: colorScheme.primary.withOpacity(0.2),
+                      color: colorScheme.primary.withValues(alpha: 0.2),
                       width: 1,
                     ),
                   ),
@@ -207,7 +207,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage>
                                 fontSize: screenWidth * 0.035,
                                 fontWeight: FontWeight.w500,
                                 color:
-                                    colorScheme.onBackground.withOpacity(0.9),
+                                    colorScheme.onSurface.withValues(alpha: 0.9),
                               ),
                             ),
                           ),
@@ -265,7 +265,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage>
       style: GoogleFonts.lexend(
         fontSize: screenWidth * 0.04,
         fontWeight: FontWeight.bold,
-        color: colorScheme.onBackground,
+        color: colorScheme.onSurface,
       ),
     );
   }
@@ -278,7 +278,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             spreadRadius: 0,
             offset: Offset(0, 2),
@@ -306,13 +306,13 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage>
         padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         decoration: BoxDecoration(
           color: selected
-              ? colorScheme.primary.withOpacity(0.1)
+              ? colorScheme.primary.withValues(alpha: 0.1)
               : colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: selected
                 ? colorScheme.primary
-                : colorScheme.outline.withOpacity(0.3),
+                : colorScheme.outline.withValues(alpha: 0.3),
             width: selected ? 2 : 1,
           ),
         ),
@@ -326,7 +326,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage>
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 4,
                     spreadRadius: 0,
                     offset: Offset(0, 2),
@@ -386,7 +386,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage>
           width: 4,
           height: 4,
           decoration: BoxDecoration(
-            color: colorScheme.onBackground.withOpacity(0.7),
+            color: colorScheme.onSurface.withValues(alpha: 0.7),
             shape: BoxShape.circle,
           ),
         ),
@@ -396,7 +396,7 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage>
             text,
             style: GoogleFonts.lexend(
               fontSize: screenWidth * 0.033,
-              color: colorScheme.onBackground.withOpacity(0.7),
+              color: colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -404,3 +404,4 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage>
     );
   }
 }
+

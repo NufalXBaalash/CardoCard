@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -41,6 +42,11 @@ class _EditProfilePageState extends State<EditProfilePage>
   String? _profileImageBase64;
   String _role = '';
   String _deleteConfirmText = '';
+
+  // Medical data
+  String _bloodType = 'A+';
+  bool _hasDiabetes = false;
+  bool _hasAsthma = false;
 
   // Form controllers
   final TextEditingController _fullNameController = TextEditingController();
@@ -128,6 +134,17 @@ class _EditProfilePageState extends State<EditProfilePage>
             _addressController.text = _address;
           });
         }
+
+        // Fetch medical info
+        final medicalDoc = await _firestore.collection('medical_info').doc(_currentUser!.uid).get();
+        if (medicalDoc.exists) {
+          final medicalData = medicalDoc.data()!;
+          setState(() {
+            _bloodType = medicalData['bloodType'] ?? 'A+';
+            _hasDiabetes = medicalData['hasDiabetes'] ?? false;
+            _hasAsthma = medicalData['hasAsthma'] ?? false;
+          });
+        }
       }
     } catch (e) {
       _showErrorSnackBar(
@@ -190,6 +207,17 @@ class _EditProfilePageState extends State<EditProfilePage>
             .doc(_currentUser!.uid)
             .update(updateData);
 
+        // Update medical info
+        await _firestore
+            .collection('medical_info')
+            .doc(_currentUser!.uid)
+            .set({
+          'bloodType': _bloodType,
+          'hasDiabetes': _hasDiabetes,
+          'hasAsthma': _hasAsthma,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
         // Show success message
         _showSuccessSnackBar(context.translate('profile_updated_success'));
 
@@ -218,61 +246,90 @@ class _EditProfilePageState extends State<EditProfilePage>
       // Request permissions if needed
       await _requestPermissions();
 
+      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+      final isDarkMode = themeProvider.isDarkMode;
+      final primaryCyan = const Color(0xFF00E5FF);
+      final bgDark = const Color(0xFF0F0F0F);
+
       showModalBottomSheet(
         context: context,
         backgroundColor: Colors.transparent,
+        barrierColor: Colors.black.withOpacity(0.5),
         builder: (BuildContext context) {
-          final colorScheme = Theme.of(context).colorScheme;
           final languageProvider = Provider.of<LanguageProvider>(context);
           final isRTL = languageProvider.isRTL;
 
           return Directionality(
             textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
-            child: Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: colorScheme.surface,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: isDarkMode 
+                      ? bgDark.withOpacity(0.9) 
+                      : Colors.white.withOpacity(0.9),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(32),
+                    topRight: Radius.circular(32),
+                  ),
+                  border: Border.all(
+                    color: primaryCyan.withOpacity(0.2),
+                    width: 1,
+                  ),
                 ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    context.translate('choose_option'),
-                    style: GoogleFonts.lexend(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 16),
-                  ListTile(
-                    leading:
-                        Icon(Icons.photo_library, color: colorScheme.primary),
-                    title: Text(
-                      context.translate('pick_from_gallery'),
-                      style: TextStyle(color: colorScheme.onSurface),
+                    const SizedBox(height: 24),
+                    Text(
+                      context.translate('choose_option').toUpperCase(),
+                      style: GoogleFonts.orbitron(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : Colors.black,
+                        letterSpacing: 1.5,
+                      ),
                     ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _pickImageFromSource(ImageSource.gallery);
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.camera_alt, color: colorScheme.primary),
-                    title: Text(
-                      context.translate('take_photo'),
-                      style: TextStyle(color: colorScheme.onSurface),
+                    const SizedBox(height: 32),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildImageOption(
+                          context,
+                          icon: Icons.photo_library_rounded,
+                          label: context.translate('gallery'),
+                          onTap: () {
+                            Navigator.pop(context);
+                            _pickImageFromSource(ImageSource.gallery);
+                          },
+                          isDarkMode: isDarkMode,
+                          primaryCyan: primaryCyan,
+                        ),
+                        _buildImageOption(
+                          context,
+                          icon: Icons.camera_alt_rounded,
+                          label: context.translate('camera'),
+                          onTap: () {
+                            Navigator.pop(context);
+                            _pickImageFromSource(ImageSource.camera);
+                          },
+                          isDarkMode: isDarkMode,
+                          primaryCyan: primaryCyan,
+                        ),
+                      ],
                     ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _pickImageFromSource(ImageSource.camera);
-                    },
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
           );
@@ -282,6 +339,49 @@ class _EditProfilePageState extends State<EditProfilePage>
       _showErrorSnackBar(
           "${context.translate('error_accessing_camera')}: ${e.toString()}");
     }
+  }
+
+  Widget _buildImageOption(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required bool isDarkMode,
+    required Color primaryCyan,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              color: primaryCyan.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: primaryCyan.withOpacity(0.3),
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: primaryCyan,
+              size: 30,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            label.toUpperCase(),
+            style: GoogleFonts.orbitron(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white : Colors.black,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _requestPermissions() async {
@@ -361,69 +461,150 @@ class _EditProfilePageState extends State<EditProfilePage>
   }
 
   void _showDeleteAccountDialog() {
-    // Local variable to hold the confirmation text inside the dialog
     String localDeleteConfirmText = '';
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+    final bgDark = const Color(0xFF0F0F0F);
 
     showDialog(
       context: context,
+      barrierColor: Colors.black.withOpacity(0.7),
       builder: (BuildContext context) {
-        final colorScheme = Theme.of(context).colorScheme;
         final languageProvider = Provider.of<LanguageProvider>(context);
         final isRTL = languageProvider.isRTL;
 
         return StatefulBuilder(builder: (context, setDialogState) {
           return Directionality(
             textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
-            child: AlertDialog(
-              title: Text(
-                context.translate('delete_account_confirmation'),
-                style: TextStyle(
-                  color: colorScheme.error,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(context.translate('delete_account_warning_detail')),
-                  SizedBox(height: 16),
-                  TextField(
-                    decoration: InputDecoration(
-                      labelText: context.translate('type_confirm'),
-                      hintText: context.translate('confirm'),
-                      border: OutlineInputBorder(),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Dialog(
+                backgroundColor: Colors.transparent,
+                insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDarkMode 
+                        ? bgDark.withOpacity(0.8) 
+                        : Colors.white.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: Colors.redAccent.withOpacity(0.5),
+                      width: 1,
                     ),
-                    onChanged: (value) {
-                      // Update local variable AND dialog state
-                      setDialogState(() {
-                        localDeleteConfirmText = value;
-                      });
-                    },
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.redAccent.withOpacity(0.1),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                      ),
+                    ],
                   ),
-                ],
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                context.translate('delete_account_confirmation').toUpperCase(),
+                                style: GoogleFonts.orbitron(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDarkMode ? Colors.white : Colors.black,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          context.translate('delete_account_warning_detail'),
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.7),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.1),
+                            ),
+                          ),
+                          child: TextField(
+                            onChanged: (value) {
+                              setDialogState(() {
+                                localDeleteConfirmText = value;
+                              });
+                            },
+                            style: GoogleFonts.poppins(
+                              color: isDarkMode ? Colors.white : Colors.black,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: context.translate('confirm'),
+                              hintStyle: TextStyle(
+                                color: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.3),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text(
+                                context.translate('cancel').toUpperCase(),
+                                style: GoogleFonts.orbitron(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.5),
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            ElevatedButton(
+                              onPressed: localDeleteConfirmText.toLowerCase() == 'confirm'
+                                  ? _handleDeleteAccount
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.redAccent,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                disabledBackgroundColor: Colors.redAccent.withOpacity(0.3),
+                              ),
+                              child: Text(
+                                context.translate('delete_my_account').toUpperCase(),
+                                style: GoogleFonts.orbitron(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text(
-                    context.translate('cancel'),
-                    style: TextStyle(color: colorScheme.primary),
-                  ),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: colorScheme.error,
-                    foregroundColor: colorScheme.onError,
-                  ),
-                  onPressed: localDeleteConfirmText.toLowerCase() == 'confirm'
-                      ? _handleDeleteAccount
-                      : null,
-                  child: Text(context.translate('delete_my_account')),
-                ),
-              ],
             ),
           );
         });
@@ -434,22 +615,54 @@ class _EditProfilePageState extends State<EditProfilePage>
   void _handleDeleteAccount() {
     Navigator.of(context).pop(); // Close the dialog
 
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+    final primaryCyan = const Color(0xFF00E5FF);
+    final bgDark = const Color(0xFF0F0F0F);
+
     // Show a loading indicator dialog
     showDialog(
       context: context,
       barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.7),
       builder: (BuildContext context) {
-        return AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text(
-                context.translate('deleting_account') ?? 'Deleting account...',
-                textAlign: TextAlign.center,
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: isDarkMode 
+                    ? bgDark.withOpacity(0.8) 
+                    : Colors.white.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: primaryCyan.withOpacity(0.2),
+                  width: 1,
+                ),
               ),
-            ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(
+                    color: primaryCyan,
+                    strokeWidth: 2,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    context.translate('deleting_account').toUpperCase(),
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.orbitron(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : Colors.black,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -620,32 +833,42 @@ class _EditProfilePageState extends State<EditProfilePage>
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    final colorScheme = Theme.of(context).colorScheme;
-    final screenSize = MediaQuery.of(context).size;
-    final screenWidth = screenSize.width;
-    final screenHeight = screenSize.height;
     final languageProvider = Provider.of<LanguageProvider>(context);
     final isRTL = languageProvider.isRTL;
+
+    final primaryCyan = isDarkMode ? const Color(0xFF00E5FF) : const Color(0xFF00B8D4);
+    final bgPage = isDarkMode ? const Color(0xFF0F0F0F) : const Color(0xFFF5F7FA);
+    final cardBg = isDarkMode ? Colors.white.withOpacity(0.03) : Colors.white;
+    final textColor = isDarkMode ? Colors.white : const Color(0xFF0F0F0F);
+    final borderColor = isDarkMode ? Colors.white.withOpacity(0.05) : primaryCyan.withOpacity(0.2);
 
     return Directionality(
       textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
+        backgroundColor: bgPage,
         appBar: AppBar(
           title: Text(
             context.translate('edit_profile'),
-            style: GoogleFonts.lexend(
-              fontSize: 20,
+            style: GoogleFonts.orbitron(
+              fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
+              color: isDarkMode ? Colors.white : primaryCyan,
+              letterSpacing: 1.5,
             ),
           ),
-          backgroundColor: colorScheme.surface,
+          backgroundColor: Colors.transparent,
           elevation: 0,
           centerTitle: true,
+          flexibleSpace: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(color: bgPage.withOpacity(0.8)),
+            ),
+          ),
           leading: IconButton(
             icon: Icon(
               isRTL ? Icons.arrow_forward : Icons.arrow_back,
-              color: colorScheme.onSurface,
+              color: primaryCyan,
             ),
             onPressed: () => Navigator.pop(context),
           ),
@@ -658,8 +881,8 @@ class _EditProfilePageState extends State<EditProfilePage>
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: colorScheme.primary,
+                      strokeWidth: 2,
+                      color: primaryCyan,
                     ),
                   ),
                 ),
@@ -667,95 +890,109 @@ class _EditProfilePageState extends State<EditProfilePage>
             else
               IconButton(
                 icon: Icon(
-                  Icons.check,
-                  color: colorScheme.primary,
+                  Icons.check_circle_outline,
+                  color: primaryCyan,
+                  size: 28,
                 ),
                 onPressed: _saveChanges,
               ),
           ],
         ),
-        backgroundColor: colorScheme.background,
         body: _isLoading
             ? Center(
                 child: CircularProgressIndicator(
-                  color: colorScheme.primary,
+                  color: primaryCyan,
+                  strokeWidth: 2,
                 ),
               )
             : SafeArea(
                 child: FadeTransition(
                   opacity: _fadeAnimation,
                   child: ListView(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
                       vertical: 24,
                     ),
                     children: [
-                      // Profile Image Section
+                      // Profile Image Section with Bio-Tech Ring
                       Center(
                         child: GestureDetector(
                           onTap: _pickImage,
                           child: Stack(
+                            alignment: Alignment.center,
                             children: [
-                              // Profile image - Optimized with RepaintBoundary
-                              RepaintBoundary(
-                                child: Hero(
-                                  tag: 'profileImage',
-                                  child: AnimatedContainer(
-                                    duration: Duration(milliseconds: 300),
-                                    width: screenWidth * 0.28,
-                                    height: screenWidth * 0.28,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: isDarkMode
-                                          ? Colors.grey[800]
-                                          : Colors.grey[200],
-                                      border: Border.all(
-                                        color: colorScheme.primary
-                                            .withOpacity(0.5),
-                                        width: 2,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.1),
-                                          blurRadius: 10,
-                                          spreadRadius: 1,
-                                        ),
-                                      ],
-                                      image: _buildProfileImage(),
-                                    ),
-                                    child: (_imageFile == null &&
-                                            (_profileImageBase64 == null ||
-                                                _profileImageBase64!.isEmpty))
-                                        ? Icon(
-                                            Icons.person,
-                                            size: screenWidth * 0.14,
-                                            color: isDarkMode
-                                                ? Colors.white54
-                                                : Colors.grey,
-                                          )
-                                        : null,
+                              // Outer Glowing Ring
+                              Container(
+                                width: MediaQuery.of(context).size.width * 0.35,
+                                height: MediaQuery.of(context).size.width * 0.35,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: primaryCyan.withOpacity(0.3),
+                                    width: 1,
                                   ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: primaryCyan.withOpacity(0.1),
+                                      blurRadius: 20,
+                                      spreadRadius: 5,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Profile image
+                              Hero(
+                                tag: 'profileImage',
+                                child: Container(
+                                  width: MediaQuery.of(context).size.width * 0.3,
+                                  height: MediaQuery.of(context).size.width * 0.3,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.white,
+                                    border: Border.all(
+                                      color: primaryCyan.withOpacity(0.5),
+                                      width: 2,
+                                    ),
+                                    boxShadow: isDarkMode ? [] : [
+                                      BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+                                    ],
+                                    image: _buildProfileImage(),
+                                  ),
+                                  child: (_imageFile == null &&
+                                          (_profileImageBase64 == null ||
+                                              _profileImageBase64!.isEmpty))
+                                      ? Icon(
+                                          Icons.person_outlined,
+                                          size: MediaQuery.of(context).size.width * 0.15,
+                                          color: primaryCyan.withOpacity(0.5),
+                                        )
+                                      : null,
                                 ),
                               ),
                               // Camera icon overlay
                               Positioned(
-                                right: isRTL ? null : 0,
-                                left: isRTL ? 0 : null,
+                                right: 0,
                                 bottom: 0,
                                 child: Container(
-                                  padding: EdgeInsets.all(8),
+                                  padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: colorScheme.primary,
+                                    color: primaryCyan,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: colorScheme.background,
+                                      color: bgPage,
                                       width: 2,
                                     ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: primaryCyan.withOpacity(0.4),
+                                        blurRadius: 10,
+                                      ),
+                                    ],
                                   ),
                                   child: Icon(
-                                    Icons.camera_alt,
+                                    Icons.add_a_photo_rounded,
                                     size: 16,
-                                    color: Colors.white,
+                                    color: isDarkMode ? Colors.black : Colors.white,
                                   ),
                                 ),
                               ),
@@ -764,164 +1001,222 @@ class _EditProfilePageState extends State<EditProfilePage>
                         ),
                       ),
 
+                      const SizedBox(height: 12),
+
                       Center(
-                        child: Padding(
-                          padding: EdgeInsets.only(top: 8, bottom: 24),
-                          child: Text(
-                            context.translate('change_profile_picture'),
-                            style: GoogleFonts.lexend(
-                              fontSize: screenWidth * 0.035,
-                              color: colorScheme.primary,
-                            ),
+                        child: Text(
+                          context.translate('change_profile_picture').toUpperCase(),
+                          style: GoogleFonts.orbitron(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: primaryCyan,
+                            letterSpacing: 1.5,
                           ),
                         ),
                       ),
 
-                      // Form Fields Container
+                      const SizedBox(height: 40),
+
+                      // Protocols Header
+                      Text(
+                        "USER PROTOCOLS",
+                        style: GoogleFonts.orbitron(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: textColor.withOpacity(0.5),
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Form Fields (Glassmorphism Bento Container)
                       Container(
                         decoration: BoxDecoration(
-                          color: isDarkMode
-                              ? colorScheme.surface.withOpacity(0.3)
-                              : colorScheme.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              spreadRadius: 0,
-                              offset: Offset(0, 2),
-                            ),
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: borderColor),
+                          boxShadow: isDarkMode ? [] : [
+                            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)
                           ],
                         ),
-                        padding: EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(20),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Full Name
                             _buildFormField(
                               label: context.translate('full_name'),
                               controller: _fullNameController,
                               focusNode: _fullNameFocus,
                               context: context,
-                              prefixIcon: Icons.person_outline,
+                              prefixIcon: Icons.person_outline_rounded,
                               textInputAction: TextInputAction.next,
-                              onEditingComplete: () => FocusScope.of(context)
-                                  .requestFocus(_phoneFocus),
+                              textColor: textColor,
+                              primaryCyan: primaryCyan,
                             ),
-
-                            // Email (Non-editable)
+                            const SizedBox(height: 20),
                             _buildNonEditableField(
                               label: context.translate('email'),
                               value: _email,
-                              prefixIcon: Icons.email_outlined,
+                              prefixIcon: Icons.alternate_email_rounded,
                               context: context,
+                              textColor: textColor,
                             ),
-
-                            // Role (Non-editable)
+                            const SizedBox(height: 20),
                             _buildNonEditableField(
                               label: context.translate('role'),
                               value: _role,
-                              prefixIcon: Icons.work_outline,
+                              prefixIcon: Icons.admin_panel_settings_outlined,
                               context: context,
+                              textColor: textColor,
                             ),
-
-                            // Phone Number
+                            const SizedBox(height: 20),
                             _buildFormField(
                               label: context.translate('phone_number'),
                               controller: _phoneController,
                               focusNode: _phoneFocus,
                               context: context,
-                              prefixIcon: Icons.phone_outlined,
+                              prefixIcon: Icons.phone_android_rounded,
                               keyboardType: TextInputType.phone,
                               textInputAction: TextInputAction.next,
-                              onEditingComplete: () => FocusScope.of(context)
-                                  .requestFocus(_addressFocus),
+                              textColor: textColor,
+                              primaryCyan: primaryCyan,
                             ),
-
-                            // Address
+                            const SizedBox(height: 20),
                             _buildFormField(
                               label: context.translate('address'),
                               controller: _addressController,
                               focusNode: _addressFocus,
                               context: context,
-                              prefixIcon: Icons.home_outlined,
+                              prefixIcon: Icons.location_on_outlined,
                               textInputAction: TextInputAction.done,
+                              textColor: textColor,
+                              primaryCyan: primaryCyan,
                             ),
                           ],
                         ),
                       ),
 
-                      SizedBox(height: 32),
+                      const SizedBox(height: 32),
 
-                      // Delete Account Section
+                      // Medical Protocols Header
+                      Text(
+                        "MEDICAL PROTOCOLS",
+                        style: GoogleFonts.orbitron(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: primaryCyan.withOpacity(0.5),
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
                       Container(
                         decoration: BoxDecoration(
-                          color: isDarkMode
-                              ? Colors.red.withOpacity(0.1)
-                              : Colors.red.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(16),
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: borderColor),
+                          boxShadow: isDarkMode ? [] : [
+                            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            _buildBloodTypeDropdown(context, primaryCyan, textColor, isDarkMode),
+                            const SizedBox(height: 20),
+                            _buildMedicalToggle(
+                              label: context.translate('diabetes'),
+                              value: _hasDiabetes,
+                              onChanged: (val) => setState(() => _hasDiabetes = val),
+                              icon: Icons.monitor_heart_rounded,
+                              primaryCyan: primaryCyan,
+                              textColor: textColor,
+                              isDarkMode: isDarkMode,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildMedicalToggle(
+                              label: context.translate('asthma'),
+                              value: _hasAsthma,
+                              onChanged: (val) => setState(() => _hasAsthma = val),
+                              icon: Icons.air_rounded,
+                              primaryCyan: primaryCyan,
+                              textColor: textColor,
+                              isDarkMode: isDarkMode,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      // Security / Danger Zone Header
+                      Text(
+                        "SECURITY PROTOCOLS",
+                        style: GoogleFonts.orbitron(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.redAccent.withOpacity(0.5),
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Delete Account Section (High-Contrast Danger Zone)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withOpacity(isDarkMode ? 0.02 : 0.05),
+                          borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                            color: Colors.red.withOpacity(0.3),
+                            color: Colors.redAccent.withOpacity(0.2),
                             width: 1,
                           ),
                         ),
-                        padding: EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(24),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Delete Account Header
                             Row(
                               children: [
-                                Icon(Icons.warning_amber_rounded,
-                                    color: Colors.red),
-                                SizedBox(width: 8),
+                                const Icon(Icons.gpp_maybe_rounded,
+                                    color: Colors.redAccent, size: 24),
+                                const SizedBox(width: 12),
                                 Text(
-                                  context.translate('delete_account'),
-                                  style: GoogleFonts.lexend(
-                                    fontSize: screenWidth * 0.045,
+                                  context.translate('delete_account').toUpperCase(),
+                                  style: GoogleFonts.orbitron(
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.red,
+                                    color: Colors.redAccent,
+                                    letterSpacing: 1,
                                   ),
                                 ),
                               ],
                             ),
-
-                            SizedBox(height: 12),
-
-                            // Warning Text
+                            const SizedBox(height: 12),
                             Text(
                               context.translate('delete_account_warning'),
-                              style: GoogleFonts.lexend(
-                                fontSize: screenWidth * 0.035,
-                                color:
-                                    colorScheme.onBackground.withOpacity(0.7),
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: textColor.withOpacity(0.6),
                               ),
                             ),
-
-                            SizedBox(height: 16),
-
-                            // Delete Account Button
-                            Center(
-                              child: ElevatedButton.icon(
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
                                 onPressed: _showDeleteAccountDialog,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 24,
-                                    vertical: 12,
-                                  ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.redAccent,
+                                  side: const BorderSide(color: Colors.redAccent),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
-                                  elevation: 0,
                                 ),
-                                icon: Icon(Icons.delete_forever),
-                                label: Text(
-                                  context.translate('delete_my_account'),
-                                  style: GoogleFonts.lexend(
-                                    fontSize: screenWidth * 0.04,
+                                child: Text(
+                                  context.translate('delete_my_account').toUpperCase(),
+                                  style: GoogleFonts.orbitron(
+                                    fontSize: 12,
                                     fontWeight: FontWeight.bold,
+                                    letterSpacing: 1,
                                   ),
                                 ),
                               ),
@@ -929,7 +1224,7 @@ class _EditProfilePageState extends State<EditProfilePage>
                           ],
                         ),
                       ),
-                      SizedBox(height: 40),
+                      const SizedBox(height: 60),
                     ],
                   ),
                 ),
@@ -960,62 +1255,38 @@ class _EditProfilePageState extends State<EditProfilePage>
     return null;
   }
 
-  Widget _buildSectionTitle(String title, BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: 8, top: 16),
-      child: Text(
-        title,
-        style: GoogleFonts.lexend(
-          fontSize: screenWidth * 0.04,
-          fontWeight: FontWeight.bold,
-          color: colorScheme.onBackground,
-        ),
-      ),
-    );
-  }
-
   Widget _buildFormField({
     required String label,
     required TextEditingController controller,
     required FocusNode focusNode,
     required BuildContext context,
     required IconData prefixIcon,
+    required Color textColor,
+    required Color primaryCyan,
     TextInputType? keyboardType,
     TextInputAction? textInputAction,
     VoidCallback? onEditingComplete,
   }) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.isDarkMode;
-    final colorScheme = Theme.of(context).colorScheme;
-    final screenSize = MediaQuery.of(context).size;
-    final screenWidth = screenSize.width;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(label, context),
-        AnimatedContainer(
-          duration: Duration(milliseconds: 300),
-          margin: EdgeInsets.only(bottom: 16),
+        Text(
+          label.toUpperCase(),
+          style: GoogleFonts.orbitron(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: textColor.withOpacity(0.4),
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
           decoration: BoxDecoration(
-            color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey[200],
+            color: textColor.withOpacity(0.02),
             borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: focusNode.hasFocus
-                    ? colorScheme.primary.withOpacity(0.3)
-                    : Colors.transparent,
-                blurRadius: 4,
-                offset: Offset(0, 2),
-              ),
-            ],
             border: Border.all(
-              color:
-                  focusNode.hasFocus ? colorScheme.primary : Colors.transparent,
-              width: 1.5,
+              color: focusNode.hasFocus ? primaryCyan : textColor.withOpacity(0.1),
+              width: 1,
             ),
           ),
           child: TextField(
@@ -1024,24 +1295,17 @@ class _EditProfilePageState extends State<EditProfilePage>
             keyboardType: keyboardType,
             textInputAction: textInputAction,
             onEditingComplete: onEditingComplete,
-            style: GoogleFonts.lexend(
-              fontSize: screenWidth * 0.04,
-              color: colorScheme.onBackground,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: textColor,
             ),
             decoration: InputDecoration(
               prefixIcon: Icon(
                 prefixIcon,
-                color: focusNode.hasFocus
-                    ? colorScheme.primary
-                    : colorScheme.onBackground.withOpacity(0.6),
+                color: focusNode.hasFocus ? primaryCyan : textColor.withOpacity(0.3),
               ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: Colors.transparent,
-              contentPadding: EdgeInsets.symmetric(
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 16,
               ),
@@ -1057,50 +1321,51 @@ class _EditProfilePageState extends State<EditProfilePage>
     required String value,
     required IconData prefixIcon,
     required BuildContext context,
+    required Color textColor,
   }) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.isDarkMode;
-    final colorScheme = Theme.of(context).colorScheme;
-    final screenSize = MediaQuery.of(context).size;
-    final screenWidth = screenSize.width;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle(label, context),
+        Text(
+          label.toUpperCase(),
+          style: GoogleFonts.orbitron(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: textColor.withOpacity(0.4),
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 8),
         Container(
-          margin: EdgeInsets.only(bottom: 16),
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
-            color: isDarkMode
-                ? const Color(0xFF2C2C2C).withOpacity(0.7)
-                : Colors.grey[200]!.withOpacity(0.7),
+            color: textColor.withOpacity(0.01),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.transparent,
-              width: 1.5,
+              color: textColor.withOpacity(0.05),
+              width: 1,
             ),
           ),
           child: Row(
             children: [
               Icon(
                 prefixIcon,
-                color: colorScheme.onBackground.withOpacity(0.6),
+                color: textColor.withOpacity(0.2),
               ),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               Expanded(
                 child: Text(
                   value,
-                  style: GoogleFonts.lexend(
-                    fontSize: screenWidth * 0.04,
-                    color: colorScheme.onBackground.withOpacity(0.8),
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: textColor.withOpacity(0.5),
                   ),
                 ),
               ),
               Icon(
-                Icons.lock_outline,
+                Icons.lock_outline_rounded,
                 size: 16,
-                color: colorScheme.onBackground.withOpacity(0.4),
+                color: textColor.withOpacity(0.2),
               ),
             ],
           ),
@@ -1108,4 +1373,92 @@ class _EditProfilePageState extends State<EditProfilePage>
       ],
     );
   }
+
+  Widget _buildBloodTypeDropdown(BuildContext context, Color primaryCyan, Color textColor, bool isDarkMode) {
+    final List<String> bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          context.translate('blood_type').toUpperCase(),
+          style: GoogleFonts.orbitron(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: textColor.withOpacity(0.4),
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: textColor.withOpacity(0.02),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: textColor.withOpacity(0.1)),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _bloodType,
+              isExpanded: true,
+              dropdownColor: isDarkMode ? const Color(0xFF0F0F0F) : Colors.white,
+              icon: Icon(Icons.keyboard_arrow_down_rounded, color: primaryCyan),
+              style: GoogleFonts.poppins(color: textColor, fontSize: 14),
+              items: bloodTypes.map((String type) {
+                return DropdownMenuItem<String>(
+                  value: type,
+                  child: Text(type),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  setState(() => _bloodType = newValue);
+                }
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMedicalToggle({
+    required String label,
+    required bool value,
+    required Function(bool) onChanged,
+    required IconData icon,
+    required Color primaryCyan,
+    required Color textColor,
+    required bool isDarkMode,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: textColor.withOpacity(0.01),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: textColor.withOpacity(0.05)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: primaryCyan.withOpacity(0.7), size: 20),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(color: textColor, fontSize: 14),
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: primaryCyan,
+            activeTrackColor: primaryCyan.withOpacity(0.2),
+            inactiveThumbColor: isDarkMode ? Colors.white24 : Colors.grey,
+            inactiveTrackColor: isDarkMode ? Colors.white10 : Colors.black12,
+          ),
+        ],
+      ),
+    );
+  }
 }
+

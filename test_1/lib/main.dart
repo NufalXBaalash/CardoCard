@@ -16,28 +16,58 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:test_1/utils/refresh_rate_manager.dart';
 import 'package:test_1/utils/notification_service.dart';
+import 'package:test_1/utils/serial_service.dart';
 
 void main() async {
   // Ensure Flutter is initialized before accessing native code
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize Serial Service for Arduino Support
+  SerialService().init();
+
   // Set the app to use the highest refresh rate available
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   // Initialize refresh rate manager for high refresh rate support
-  await RefreshRateManager.initialize();
+  RefreshRateManager.initialize();
 
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+  } catch (e) {
+    debugPrint("Firebase initialization error: $e");
+  }
 
   // Initialize notification service
-  final notificationService = NotificationService();
-  await notificationService.init();
-  
+  try {
+    final notificationService = NotificationService();
+    await notificationService.init().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            debugPrint("Notification init timeout");
+            return;
+          },
+        );
+  } catch (e) {
+    debugPrint("Notification service error: $e");
+  }
+
   // Initialize custom cache manager
-  await CacheService.initialize();
+  try {
+    await CacheService.initialize().timeout(
+          const Duration(seconds: 3),
+          onTimeout: () {
+            debugPrint("Cache initialization timeout");
+            return;
+          },
+        );
+  } catch (e) {
+    debugPrint("Cache service error: $e");
+  }
 
   // Set memory cache size for better performance
   PaintingBinding.instance.imageCache.maximumSize = 100;
@@ -51,7 +81,7 @@ void main() async {
         (message, {wrapWidth}) {}; // Disable debug prints in release mode
   }
 
-  // Initialize notification service
+  // Start the application
   runApp(const MyApp());
 }
 
@@ -68,11 +98,6 @@ class MyApp extends StatelessWidget {
       child: Consumer2<ThemeProvider, LanguageProvider>(
         builder: (context, themeProvider, languageProvider, child) {
           // Initialize language provider on first build
-          if (languageProvider.isFirstRun) {
-            // Use Future.microtask to avoid calling setState during build
-            Future.microtask(() => languageProvider.initialize());
-          }
-
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme(),
@@ -129,16 +154,33 @@ class _StartupRouterState extends State<StartupRouter> {
   }
 
   Future<void> _checkFirstTime() async {
-    final prefs = await SharedPreferences.getInstance();
-    final isFirstTime = prefs.getBool('isFirstTime') ?? true;
+    try {
+      // Initialize LanguageProvider if not already done
+      final languageProvider = Provider.of<LanguageProvider>(context, listen: false);
+      if (languageProvider.isFirstRun) {
+        await languageProvider.initialize();
+      }
 
-    setState(() {
-      _isFirstTime = isFirstTime;
-      _isLoading = false;
-    });
+      final prefs = await SharedPreferences.getInstance();
+      final isFirstTime = prefs.getBool('isFirstTime') ?? true;
 
-    if (isFirstTime) {
-      await prefs.setBool('isFirstTime', false);
+      if (mounted) {
+        setState(() {
+          _isFirstTime = isFirstTime;
+          _isLoading = false;
+        });
+      }
+
+      if (isFirstTime) {
+        await prefs.setBool('isFirstTime', false);
+      }
+    } catch (e) {
+      debugPrint("Error in StartupRouter: $e");
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

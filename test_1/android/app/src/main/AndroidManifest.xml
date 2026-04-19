@@ -50,14 +50,31 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            
-            <!-- NFC Intent Filters for Read and Write -->
+
+            <!-- USB Device Support -->
             <intent-filter>
-                <action android:name="android.nfc.action.TECH_DISCOVERED"/>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
             </intent-filter>
-            <meta-data
-                android:name="android.nfc.action.TECH_DISCOVERED"
-                android:resource="@xml/nfc_tech_filter"/>
+            <meta-data android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/device_filter" />
+
+            <!-- Deep Linking for URL -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="akemekem.github.io" android:pathPrefix="/cardo" />
+                <data android:scheme="http" android:host="akemekem.github.io" android:pathPrefix="/cardo" />
+            </intent-filter>
+
+            <!-- NFC Support -->
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="https" android:host="akemekem.github.io" android:pathPrefix="/cardo" />
+                <data android:scheme="http" android:host="akemekem.github.io" android:pathPrefix="/cardo" />
+            </intent-filter>
+            
         </activity>
 
         <meta-data

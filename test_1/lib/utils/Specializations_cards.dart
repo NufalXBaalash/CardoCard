@@ -107,7 +107,7 @@ class _SpecializationsCardsState extends State<SpecializationsCards>
                     boxShadow: [
                       BoxShadow(
                         color:
-                            widget.color.withOpacity(isDarkMode ? 0.2 : 0.15),
+                            widget.color.withValues(alpha: isDarkMode ? 0.2 : 0.15),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -121,7 +121,7 @@ class _SpecializationsCardsState extends State<SpecializationsCards>
                         width: cardWidth,
                         decoration: BoxDecoration(
                           color:
-                              widget.color.withOpacity(isDarkMode ? 0.9 : 1.0),
+                              widget.color.withValues(alpha: isDarkMode ? 0.9 : 1.0),
                           borderRadius:
                               BorderRadius.circular(screenSize.width * 0.04),
                         ),
