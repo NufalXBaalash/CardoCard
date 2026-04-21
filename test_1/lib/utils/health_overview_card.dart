@@ -6,7 +6,7 @@ import 'package:test_1/utils/language_provider.dart';
 
 class HealthOverviewCard extends StatefulWidget {
   final String title;
-  final String icon;
+  final IconData icon;
   final String description;
   final Color color;
   final Color status_color;
@@ -151,11 +151,10 @@ class _HealthOverviewCardState extends State<HealthOverviewCard>
                           ],
                         ),
                         child: Center(
-                          child: Image.asset(
+                          child: Icon(
                             widget.icon,
-                            width: iconSize,
-                            height: iconSize,
-                            color: isDarkMode ? Colors.white : null,
+                            size: iconSize,
+                            color: Colors.white,
                           ),
                         ),
                       ),

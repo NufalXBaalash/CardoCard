@@ -1,13 +1,10 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:convert';
-import 'dart:ui';
+import 'dart:convert'; // Add this import for base64
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:test_1/pages/medical_info_page.dart';
@@ -35,18 +32,10 @@ class ProfileImagePage extends StatefulWidget {
 
 class _ProfileImagePageState extends State<ProfileImagePage>
     with SingleTickerProviderStateMixin {
-  // Bio-Tech Colors
-  static const Color biotechBlack = Color(0xFF0F0F0F);
-  static const Color biotechCyan = Color(0xFF00E5FF);
-
   File? _imageFile;
   bool _isLoading = false;
   final ImagePicker _picker = ImagePicker();
   String? _base64Image;
-
-  // Firebase storage reference
-  final FirebaseStorage _storage = FirebaseStorage.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Animation controller for image and buttons
   late AnimationController _animationController;
@@ -446,42 +435,33 @@ class _ProfileImagePageState extends State<ProfileImagePage>
       context: context,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-        final isDarkMode = themeProvider.isDarkMode;
-        final cardColor = isDarkMode ? biotechBlack : Colors.white;
-        final onSurfaceColor = isDarkMode ? Colors.white : biotechBlack;
-
+        final colorScheme = Theme.of(context).colorScheme;
         return Container(
           padding: EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: cardColor,
+            color: colorScheme.surface,
             borderRadius: BorderRadius.only(
               topLeft: Radius.circular(20),
               topRight: Radius.circular(20),
-            ),
-            border: Border.all(
-              color: biotechCyan.withOpacity(isDarkMode ? 0.2 : 0.4),
-              width: 1.5,
             ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                context.translate('choose_option').toUpperCase(),
-                style: GoogleFonts.orbitron(
+                context.translate('choose_option'),
+                style: GoogleFonts.lexend(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: biotechCyan,
-                  letterSpacing: 1.5,
+                  color: colorScheme.onSurface,
                 ),
               ),
               SizedBox(height: 16),
               ListTile(
-                leading: Icon(Icons.photo_library, color: biotechCyan),
+                leading: Icon(Icons.photo_library, color: colorScheme.primary),
                 title: Text(
                   context.translate('pick_gallery'),
-                  style: GoogleFonts.poppins(color: onSurfaceColor),
+                  style: TextStyle(color: colorScheme.onSurface),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -489,10 +469,10 @@ class _ProfileImagePageState extends State<ProfileImagePage>
                 },
               ),
               ListTile(
-                leading: Icon(Icons.camera_alt, color: biotechCyan),
+                leading: Icon(Icons.camera_alt, color: colorScheme.primary),
                 title: Text(
                   context.translate('take_photo'),
-                  style: GoogleFonts.poppins(color: onSurfaceColor),
+                  style: TextStyle(color: colorScheme.onSurface),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -511,11 +491,8 @@ class _ProfileImagePageState extends State<ProfileImagePage>
     // Get theme data
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    
-    final backgroundColor = isDarkMode ? biotechBlack : const Color(0xFFF5F7FA);
-    final cardColor = isDarkMode ? Colors.white.withOpacity(0.03) : Colors.white.withOpacity(0.7);
-    final onSurfaceColor = isDarkMode ? Colors.white : biotechBlack;
-    final subTextColor = isDarkMode ? Colors.white70 : Colors.black54;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     // Get language provider and direction
     final languageProvider = Provider.of<LanguageProvider>(context);
@@ -526,356 +503,338 @@ class _ProfileImagePageState extends State<ProfileImagePage>
     final screenWidth = screenSize.width;
     final screenHeight = screenSize.height;
 
-    return PopScope(
-      canPop: true,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
+    return WillPopScope(
+      onWillPop: () async {
+        // Simply allow back navigation without dialog
+        return true;
       },
       child: Directionality(
         textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
         child: Scaffold(
-          backgroundColor: backgroundColor,
-          extendBodyBehindAppBar: true,
+          backgroundColor: colorScheme.background,
           appBar: AppBar(
-            backgroundColor: Colors.transparent,
+            backgroundColor: colorScheme.background,
+            surfaceTintColor: Colors.transparent,
             elevation: 0,
             leading: IconButton(
               icon: Icon(isRTL ? Icons.arrow_forward : Icons.arrow_back,
-                  color: onSurfaceColor),
+                  color: colorScheme.onBackground),
               onPressed: () {
                 // Simply navigate back without dialog
                 Navigator.of(context).pop();
               },
             ),
             title: Text(
-              context.translate('profile_picture').toUpperCase(),
-              style: GoogleFonts.orbitron(
-                fontSize: 18,
+              context.translate('profile_picture'),
+              style: GoogleFonts.lexend(
+                fontSize: screenWidth * 0.045,
                 fontWeight: FontWeight.bold,
-                color: biotechCyan,
-                letterSpacing: 1.5,
+                color: colorScheme.onBackground,
               ),
             ),
             centerTitle: true,
           ),
           body: SafeArea(
-            child: Stack(
-              children: [
-                // Background Glows
-                Positioned(
-                  top: -50,
-                  right: -50,
-                  child: Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: biotechCyan.withOpacity(isDarkMode ? 0.05 : 0.1),
-                    ),
-                  ),
-                ),
-                SingleChildScrollView(
-                  physics: BouncingScrollPhysics(),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        SizedBox(height: screenHeight * 0.02),
+            child: SingleChildScrollView(
+              physics: BouncingScrollPhysics(),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(height: screenHeight * 0.02),
 
-                        // Step indicator with improved UI
-                        TweenAnimationBuilder<double>(
-                          tween: Tween<double>(begin: 0, end: 1),
-                          duration: Duration(milliseconds: 800),
-                          curve: Curves.easeOutCubic,
-                          builder: (context, value, child) {
-                            return Opacity(
-                              opacity: value,
-                              child: Transform.translate(
-                                offset: Offset(0, 10 * (1 - value)),
-                                child: child,
+                    // Step indicator with improved UI
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: Duration(milliseconds: 800),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, 10 * (1 - value)),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildStepIndicator(1, true, colorScheme),
+                          _buildStepDivider(true, colorScheme),
+                          _buildStepIndicator(2, true, colorScheme),
+                          _buildStepDivider(false, colorScheme),
+                          _buildStepIndicator(3, false, colorScheme),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: screenHeight * 0.03),
+
+                    // Title with animation
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: Duration(milliseconds: 1000),
+                      curve: Curves.easeOutQuad,
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, 15 * (1 - value)),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Text(
+                        context.translate('add_profile_picture'),
+                        style: GoogleFonts.lexend(
+                          fontSize: screenWidth * 0.06,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onBackground,
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: screenHeight * 0.015),
+
+                    // Description with animation
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: Duration(milliseconds: 1200),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, 15 * (1 - value)),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: screenWidth * 0.8,
+                        child: Text(
+                          context.translate('profile_picture_description'),
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.lexend(
+                            fontSize: screenWidth * 0.035,
+                            color: colorScheme.onBackground.withOpacity(0.7),
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: screenHeight * 0.05),
+
+                    // Profile image container with enhanced animations
+                    GestureDetector(
+                      onTap: _showImageSourceOptions,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0, end: 1),
+                        duration: Duration(milliseconds: 1000),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, child) {
+                          return Opacity(
+                            opacity: value,
+                            child: Transform.scale(
+                              scale: 0.8 + (0.2 * value),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: AnimatedContainer(
+                          duration: Duration(milliseconds: 300),
+                          width: screenWidth * 0.55,
+                          height: screenWidth * 0.55,
+                          decoration: BoxDecoration(
+                            color: isDarkMode
+                                ? Colors.grey[800]
+                                : Colors.grey[200],
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 15,
+                                spreadRadius: 2,
+                                offset: Offset(0, 5),
                               ),
-                            );
-                          },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _buildStepIndicator(1, true, isDarkMode),
-                              _buildStepDivider(true, isDarkMode),
-                              _buildStepIndicator(2, true, isDarkMode),
-                              _buildStepDivider(false, isDarkMode),
-                              _buildStepIndicator(3, false, isDarkMode),
+                            ],
+                            border: Border.all(
+                              color: _imageFile != null
+                                  ? colorScheme.primary
+                                  : colorScheme.primaryContainer
+                                      .withOpacity(0.3),
+                              width: 4,
+                            ),
+                            image: _imageFile != null
+                                ? DecorationImage(
+                                    image: FileImage(_imageFile!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
+                          ),
+                          child: _imageFile == null
+                              ? Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    AnimatedContainer(
+                                      duration: Duration(milliseconds: 300),
+                                      padding: EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.primaryContainer
+                                            .withOpacity(0.3),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.add_a_photo,
+                                        size: screenWidth * 0.08,
+                                        color: isDarkMode
+                                            ? Colors.white
+                                            : colorScheme.primary,
+                                      ),
+                                    ),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      context.translate('tap_add_photo'),
+                                      style: GoogleFonts.lexend(
+                                        fontSize: screenWidth * 0.04,
+                                        fontWeight: FontWeight.w500,
+                                        color: isDarkMode
+                                            ? Colors.white.withOpacity(0.9)
+                                            : colorScheme.primary,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : null,
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: screenHeight * 0.07),
+
+                    // Continue button with enhanced design
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: Duration(milliseconds: 1400),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, 30 * (1 - value)),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: GestureDetector(
+                        onTap: _isLoading ? null : _uploadImageAndContinue,
+                        child: AnimatedContainer(
+                          duration: Duration(milliseconds: 300),
+                          width: double.infinity,
+                          height: screenHeight * 0.06,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(30),
+                            color: _isLoading
+                                ? Colors.grey
+                                : _imageFile != null
+                                    ? colorScheme.primary
+                                    : colorScheme.primary.withOpacity(0.7),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colorScheme.primary.withOpacity(0.3),
+                                blurRadius: 8,
+                                spreadRadius: 1,
+                                offset: Offset(0, 3),
+                              ),
                             ],
                           ),
-                        ),
-
-                        SizedBox(height: screenHeight * 0.03),
-
-                        // Title with animation
-                        TweenAnimationBuilder<double>(
-                          tween: Tween<double>(begin: 0, end: 1),
-                          duration: Duration(milliseconds: 1000),
-                          curve: Curves.easeOutQuad,
-                          builder: (context, value, child) {
-                            return Opacity(
-                              opacity: value,
-                              child: Transform.translate(
-                                offset: Offset(0, 15 * (1 - value)),
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: Text(
-                            context.translate('add_profile_picture').toUpperCase(),
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.orbitron(
-                              fontSize: screenWidth * 0.06,
-                              fontWeight: FontWeight.bold,
-                              color: onSurfaceColor,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                        ),
-
-                        SizedBox(height: screenHeight * 0.015),
-
-                        // Description with animation
-                        TweenAnimationBuilder<double>(
-                          tween: Tween<double>(begin: 0, end: 1),
-                          duration: Duration(milliseconds: 1200),
-                          curve: Curves.easeOutCubic,
-                          builder: (context, value, child) {
-                            return Opacity(
-                              opacity: value,
-                              child: Transform.translate(
-                                offset: Offset(0, 15 * (1 - value)),
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: Container(
-                            width: screenWidth * 0.8,
-                            child: Text(
-                              context.translate('profile_picture_description'),
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.poppins(
-                                fontSize: screenWidth * 0.035,
-                                color: subTextColor,
-                                height: 1.3,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        SizedBox(height: screenHeight * 0.05),
-
-                        // Profile image container with enhanced animations
-                        GestureDetector(
-                          onTap: _showImageSourceOptions,
-                          child: TweenAnimationBuilder<double>(
-                            tween: Tween<double>(begin: 0, end: 1),
-                            duration: Duration(milliseconds: 1000),
-                            curve: Curves.easeOutCubic,
-                            builder: (context, value, child) {
-                              return Opacity(
-                                opacity: value,
-                                child: Transform.scale(
-                                  scale: 0.8 + (0.2 * value),
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: AnimatedContainer(
-                              duration: Duration(milliseconds: 300),
-                              width: screenWidth * 0.55,
-                              height: screenWidth * 0.55,
-                              decoration: BoxDecoration(
-                                color: cardColor,
-                                shape: BoxShape.circle,
-                                boxShadow: isDarkMode ? [] : [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 15,
-                                    spreadRadius: 2,
-                                    offset: Offset(0, 5),
-                                  ),
-                                ],
-                                border: Border.all(
-                                  color: _imageFile != null
-                                      ? biotechCyan
-                                      : biotechCyan.withOpacity(isDarkMode ? 0.2 : 0.4),
-                                  width: 4,
-                                ),
-                                image: _imageFile != null
-                                    ? DecorationImage(
-                                        image: FileImage(_imageFile!),
-                                        fit: BoxFit.cover,
-                                      )
-                                    : null,
-                              ),
-                              child: ClipOval(
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                                  child: _imageFile == null
-                                      ? Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            AnimatedContainer(
-                                              duration: Duration(milliseconds: 300),
-                                              padding: EdgeInsets.all(12),
-                                              decoration: BoxDecoration(
-                                                color: biotechCyan.withOpacity(0.1),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: Icon(
-                                                Icons.add_a_photo,
-                                                size: screenWidth * 0.08,
-                                                color: biotechCyan,
-                                              ),
-                                            ),
-                                            SizedBox(height: 16),
-                                            Text(
-                                              context.translate('tap_add_photo').toUpperCase(),
-                                              style: GoogleFonts.orbitron(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w500,
-                                                color: biotechCyan,
-                                                letterSpacing: 1,
-                                              ),
-                                            ),
-                                          ],
-                                        )
-                                      : null,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        SizedBox(height: screenHeight * 0.07),
-
-                        // Continue button with enhanced design
-                        TweenAnimationBuilder<double>(
-                          tween: Tween<double>(begin: 0, end: 1),
-                          duration: Duration(milliseconds: 1400),
-                          curve: Curves.easeOutCubic,
-                          builder: (context, value, child) {
-                            return Opacity(
-                              opacity: value,
-                              child: Transform.translate(
-                                offset: Offset(0, 30 * (1 - value)),
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: GestureDetector(
-                            onTap: _isLoading ? null : _uploadImageAndContinue,
-                            child: AnimatedContainer(
-                              duration: Duration(milliseconds: 300),
-                              width: double.infinity,
-                              height: screenHeight * 0.06,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(30),
-                                color: _isLoading
-                                    ? Colors.grey
-                                    : biotechCyan,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: biotechCyan.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    spreadRadius: 1,
-                                    offset: Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: _isLoading
-                                    ? SizedBox(
-                                        width: screenWidth * 0.06,
-                                        height: screenWidth * 0.06,
-                                        child: CircularProgressIndicator(
-                                          color: biotechBlack,
-                                          strokeWidth: 2.5,
+                          child: Center(
+                            child: _isLoading
+                                ? SizedBox(
+                                    width: screenWidth * 0.06,
+                                    height: screenWidth * 0.06,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        context.translate('continue'),
+                                        style: GoogleFonts.lexend(
+                                          color: Colors.white,
+                                          fontSize: screenWidth * 0.045,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                      )
-                                    : Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            context.translate('continue').toUpperCase(),
-                                            style: GoogleFonts.orbitron(
-                                              color: biotechBlack,
-                                              fontSize: screenWidth * 0.045,
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 1.5,
-                                            ),
-                                          ),
-                                          SizedBox(width: 8),
-                                          Icon(
-                                            isRTL
-                                                ? Icons.arrow_back
-                                                : Icons.arrow_forward,
-                                            color: biotechBlack,
-                                            size: screenWidth * 0.045,
-                                          ),
-                                        ],
                                       ),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        SizedBox(height: screenHeight * 0.02),
-
-                        // Skip button with animation
-                        TweenAnimationBuilder<double>(
-                          tween: Tween<double>(begin: 0, end: 1),
-                          duration: Duration(milliseconds: 1600),
-                          curve: Curves.easeOutCubic,
-                          builder: (context, value, child) {
-                            return Opacity(
-                              opacity: value,
-                              child: Transform.translate(
-                                offset: Offset(0, 20 * (1 - value)),
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: GestureDetector(
-                            onTap: _isLoading ? null : _skipAndContinue,
-                            child: AnimatedContainer(
-                              duration: Duration(milliseconds: 300),
-                              width: double.infinity,
-                              height: screenHeight * 0.06,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(30),
-                                color: Colors.transparent,
-                                border: Border.all(
-                                  color: biotechCyan,
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  context.translate('skip_for_now').toUpperCase(),
-                                  style: GoogleFonts.orbitron(
-                                    color: biotechCyan,
-                                    fontSize: screenWidth * 0.04,
-                                    fontWeight: FontWeight.w500,
-                                    letterSpacing: 1.5,
+                                      SizedBox(width: 8),
+                                      Icon(
+                                        isRTL
+                                            ? Icons.arrow_back
+                                            : Icons.arrow_forward,
+                                        color: Colors.white,
+                                        size: screenWidth * 0.045,
+                                      ),
+                                    ],
                                   ),
-                                ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: screenHeight * 0.02),
+
+                    // Skip button with animation
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: Duration(milliseconds: 1600),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, 20 * (1 - value)),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: GestureDetector(
+                        onTap: _isLoading ? null : _skipAndContinue,
+                        child: AnimatedContainer(
+                          duration: Duration(milliseconds: 300),
+                          width: double.infinity,
+                          height: screenHeight * 0.06,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(30),
+                            color: Colors.transparent,
+                            border: Border.all(
+                              color: colorScheme.primary,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              context.translate('skip_for_now'),
+                              style: GoogleFonts.lexend(
+                                color: colorScheme.primary,
+                                fontSize: screenWidth * 0.04,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
                         ),
-
-                        SizedBox(height: screenHeight * 0.04),
-                      ],
+                      ),
                     ),
-                  ),
+
+                    SizedBox(height: screenHeight * 0.04),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -884,26 +843,28 @@ class _ProfileImagePageState extends State<ProfileImagePage>
   }
 
   // Helper method to build step indicator circles
-  Widget _buildStepIndicator(int step, bool isActive, bool isDarkMode) {
+  Widget _buildStepIndicator(int step, bool isActive, ColorScheme colorScheme) {
     return AnimatedContainer(
       duration: Duration(milliseconds: 300),
       width: 30,
       height: 30,
       decoration: BoxDecoration(
-        color: isActive ? biotechCyan : Colors.transparent,
+        color: isActive ? colorScheme.primary : Colors.transparent,
         shape: BoxShape.circle,
         border: Border.all(
-          color: biotechCyan.withOpacity(isActive ? 1.0 : 0.3),
+          color: isActive
+              ? colorScheme.primary
+              : colorScheme.onBackground.withOpacity(0.3),
           width: 2,
         ),
       ),
       child: Center(
         child: Text(
           step.toString(),
-          style: GoogleFonts.orbitron(
+          style: TextStyle(
             color: isActive
-                ? biotechBlack
-                : biotechCyan.withOpacity(0.5),
+                ? Colors.white
+                : colorScheme.onBackground.withOpacity(0.5),
             fontWeight: FontWeight.bold,
             fontSize: 14,
           ),
@@ -913,13 +874,14 @@ class _ProfileImagePageState extends State<ProfileImagePage>
   }
 
   // Helper method to build dividers between step indicators
-  Widget _buildStepDivider(bool isActive, bool isDarkMode) {
+  Widget _buildStepDivider(bool isActive, ColorScheme colorScheme) {
     return AnimatedContainer(
       duration: Duration(milliseconds: 300),
       width: 40,
       height: 2,
-      color: biotechCyan.withOpacity(isActive ? 1.0 : 0.2),
+      color: isActive
+          ? colorScheme.primary
+          : colorScheme.onBackground.withOpacity(0.2),
     );
   }
 }
-

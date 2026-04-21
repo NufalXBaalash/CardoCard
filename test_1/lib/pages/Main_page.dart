@@ -15,7 +15,6 @@ class MainPage extends StatefulWidget {
   @override
   State<MainPage> createState() => MainPageState();
 
-  // Helper method to find the state from the context
   static MainPageState? of(BuildContext context) =>
       context.findAncestorStateOfType<MainPageState>();
 }
@@ -85,10 +84,9 @@ class MainPageState extends State<MainPage> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    final bgDark = const Color(0xFF0F0F0F);
 
     return Scaffold(
-      backgroundColor: isDarkMode ? bgDark : Colors.white,
+      backgroundColor: isDarkMode ? const Color(0xFF0F0F0F) : Colors.white,
       extendBody: true,
       body: IndexedStack(
         index: _selectedIndex,

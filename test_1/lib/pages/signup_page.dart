@@ -1,8 +1,6 @@
-import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:test_1/pages/profile_image_page.dart';
 import 'package:test_1/utils/theme_provider.dart';
@@ -18,10 +16,6 @@ class SignupPage extends StatefulWidget {
 
 class _SignupPageState extends State<SignupPage>
     with SingleTickerProviderStateMixin {
-  // Bio-Tech Colors
-  static const Color biotechBlack = Color(0xFF0F0F0F);
-  static const Color biotechCyan = Color(0xFF00E5FF);
-
   // Controllers and hint texts
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -264,11 +258,8 @@ class _SignupPageState extends State<SignupPage>
     // Get theme data
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    
-    final backgroundColor = isDarkMode ? biotechBlack : const Color(0xFFF5F7FA);
-    final cardColor = isDarkMode ? Colors.white.withOpacity(0.03) : Colors.white.withOpacity(0.7);
-    final onSurfaceColor = isDarkMode ? Colors.white : biotechBlack;
-    final subTextColor = isDarkMode ? Colors.white70 : Colors.black54;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     // Get language provider and direction
     final languageProvider = Provider.of<LanguageProvider>(context);
@@ -290,14 +281,14 @@ class _SignupPageState extends State<SignupPage>
       textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         resizeToAvoidBottomInset: false, // Prevent scrolling with keyboard
-        backgroundColor: backgroundColor,
-        extendBodyBehindAppBar: true,
+        backgroundColor: colorScheme.background,
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: colorScheme.background,
+          surfaceTintColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
             icon: Icon(isRTL ? Icons.arrow_forward : Icons.arrow_back,
-                color: onSurfaceColor),
+                color: colorScheme.onBackground),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
@@ -305,483 +296,467 @@ class _SignupPageState extends State<SignupPage>
           // Dismiss keyboard when tapping outside input fields
           onTap: () => FocusScope.of(context).unfocus(),
           child: SafeArea(
-            child: Stack(
-              children: [
-                // Background Glows
-                Positioned(
-                  top: -50,
-                  left: -50,
-                  child: Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: biotechCyan.withOpacity(isDarkMode ? 0.05 : 0.1),
-                    ),
-                  ),
-                ),
-                SingleChildScrollView(
-                  controller: _scrollController,
-                  // Always enable scrolling for text input accessibility
-                  physics: AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.only(
-                      bottom: keyboardHeight > 0 ? keyboardHeight : 20),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Header section with visibility based on keyboard
-                        AnimatedContainer(
-                          duration: Duration(milliseconds: 300),
-                          curve: Curves.easeOut,
-                          height: isKeyboardVisible ? 65 : null,
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                    height: isKeyboardVisible
-                                        ? 5
-                                        : screenHeight * 0.02 * scaleFactor),
-                                // Animated title
-                                TweenAnimationBuilder<double>(
-                                  tween: Tween<double>(begin: 0.0, end: 1.0),
-                                  duration: Duration(milliseconds: 800),
-                                  curve: Curves.easeOutQuad,
-                                  builder: (context, value, child) {
-                                    return Opacity(
-                                      opacity: value,
-                                      child: Transform.translate(
-                                        offset: Offset(0, 20 * (1 - value)),
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              // Always enable scrolling for text input accessibility
+              physics: AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.only(
+                  bottom: keyboardHeight > 0 ? keyboardHeight : 20),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header section with visibility based on keyboard
+                    AnimatedContainer(
+                      duration: Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                      height: isKeyboardVisible ? 65 : null,
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                                height: isKeyboardVisible
+                                    ? 5
+                                    : screenHeight * 0.02 * scaleFactor),
+                            // Animated title
+                            TweenAnimationBuilder<double>(
+                              tween: Tween<double>(begin: 0.0, end: 1.0),
+                              duration: Duration(milliseconds: 800),
+                              curve: Curves.easeOutQuad,
+                              builder: (context, value, child) {
+                                return Opacity(
+                                  opacity: value,
+                                  child: Transform.translate(
+                                    offset: Offset(0, 20 * (1 - value)),
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                context.translate('create_account'),
+                                style: GoogleFonts.lexend(
+                                  fontSize: isKeyboardVisible
+                                      ? screenWidth * 0.06
+                                      : screenWidth * 0.08,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.onBackground,
+                                ),
+                              ),
+                            ),
+                            if (!isKeyboardVisible)
+                              Column(
+                                children: [
+                                  SizedBox(
+                                      height:
+                                          screenHeight * 0.015 * scaleFactor),
+                                  // Animated subtitle
+                                  TweenAnimationBuilder<double>(
+                                    tween: Tween<double>(begin: 0.0, end: 1.0),
+                                    duration: Duration(milliseconds: 1000),
+                                    curve: Curves.easeOutCubic,
+                                    builder: (context, value, child) {
+                                      return Opacity(
+                                        opacity: value,
                                         child: child,
+                                      );
+                                    },
+                                    child: Text(
+                                      context.translate('register_step_1'),
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.lexend(
+                                        fontSize: screenWidth * 0.035,
+                                        color: colorScheme.onBackground
+                                            .withOpacity(0.7),
                                       ),
-                                    );
-                                  },
-                                  child: Text(
-                                    context.translate('create_account').toUpperCase(),
-                                    style: GoogleFonts.orbitron(
-                                      fontSize: isKeyboardVisible
-                                          ? screenWidth * 0.06
-                                          : screenWidth * 0.08,
-                                      fontWeight: FontWeight.bold,
-                                      color: biotechCyan,
-                                      letterSpacing: 2,
                                     ),
                                   ),
-                                ),
-                                if (!isKeyboardVisible)
-                                  Column(
+                                  // Step indicator
+                                  SizedBox(
+                                      height:
+                                          screenHeight * 0.03 * scaleFactor),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      SizedBox(
-                                          height:
-                                              screenHeight * 0.015 * scaleFactor),
-                                      // Animated subtitle
-                                      TweenAnimationBuilder<double>(
-                                        tween: Tween<double>(begin: 0.0, end: 1.0),
-                                        duration: Duration(milliseconds: 1000),
-                                        curve: Curves.easeOutCubic,
-                                        builder: (context, value, child) {
-                                          return Opacity(
-                                            opacity: value,
-                                            child: child,
-                                          );
+                                      _buildStepIndicator(1, true, colorScheme),
+                                      _buildStepDivider(false, colorScheme),
+                                      _buildStepIndicator(
+                                          2, false, colorScheme),
+                                      _buildStepDivider(false, colorScheme),
+                                      _buildStepIndicator(
+                                          3, false, colorScheme),
+                                    ],
+                                  ),
+                                  SizedBox(
+                                      height:
+                                          screenHeight * 0.04 * scaleFactor),
+                                ],
+                              )
+                            else
+                              SizedBox(height: 5),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Form section with staggered animations
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        // Full name field
+                        _buildAnimatedFormField(
+                          label: context.translate('full_name'),
+                          controller: _fullNameController,
+                          focusNode: _fullNameFocus,
+                          hintText: fullNameHint,
+                          errorText: fullNameHint ==
+                                  context.translate('name_empty_error')
+                              ? fullNameHint
+                              : null,
+                          onChanged: (value) {
+                            if (fullNameHint ==
+                                context.translate('name_empty_error')) {
+                              setState(() {
+                                fullNameHint =
+                                    context.translate('please_enter_full_name');
+                              });
+                            }
+                          },
+                          textInputAction: TextInputAction.next,
+                          onEditingComplete: () =>
+                              FocusScope.of(context).requestFocus(_emailFocus),
+                          context: context,
+                          index: 0,
+                        ),
+
+                        // Email field
+                        _buildAnimatedFormField(
+                          label: context.translate('email'),
+                          controller: _emailController,
+                          focusNode: _emailFocus,
+                          hintText: emailHint,
+                          errorText: emailHint ==
+                                      context
+                                          .translate('invalid_email_format') ||
+                                  emailHint ==
+                                      context.translate('email_in_use') ||
+                                  emailHint ==
+                                      context.translate('registration_error') ||
+                                  emailHint ==
+                                      context.translate('general_error')
+                              ? emailHint
+                              : null,
+                          keyboardType: TextInputType.emailAddress,
+                          onChanged: (value) {
+                            if (emailHint ==
+                                    context.translate('invalid_email_format') ||
+                                emailHint ==
+                                    context.translate('email_in_use') ||
+                                emailHint ==
+                                    context.translate('registration_error') ||
+                                emailHint ==
+                                    context.translate('general_error')) {
+                              setState(() {
+                                emailHint =
+                                    context.translate('please_enter_email');
+                              });
+                            }
+                          },
+                          textInputAction: TextInputAction.next,
+                          onEditingComplete: () => FocusScope.of(context)
+                              .requestFocus(_passwordFocus),
+                          context: context,
+                          index: 1,
+                        ),
+
+                        // Password field
+                        _buildAnimatedFormField(
+                          label: context.translate('password'),
+                          controller: _passwordController,
+                          focusNode: _passwordFocus,
+                          hintText: passwordHint,
+                          errorText: passwordHint ==
+                                      context.translate('password_too_short') ||
+                                  passwordHint ==
+                                      context.translate('password_too_weak')
+                              ? passwordHint
+                              : null,
+                          obscureText: true,
+                          onChanged: (value) {
+                            if (passwordHint ==
+                                    context.translate('password_too_short') ||
+                                passwordHint ==
+                                    context.translate('password_too_weak')) {
+                              setState(() {
+                                passwordHint =
+                                    context.translate('please_enter_password');
+                              });
+                            }
+                          },
+                          textInputAction: TextInputAction.next,
+                          onEditingComplete: () => FocusScope.of(context)
+                              .requestFocus(_confirmPasswordFocus),
+                          context: context,
+                          index: 2,
+                        ),
+
+                        // Confirm password field
+                        _buildAnimatedFormField(
+                          label: context.translate('confirm_password'),
+                          controller: _confirmPasswordController,
+                          focusNode: _confirmPasswordFocus,
+                          hintText: confirmPasswordHint,
+                          errorText: confirmPasswordHint ==
+                                  context.translate('passwords_dont_match')
+                              ? confirmPasswordHint
+                              : null,
+                          obscureText: true,
+                          onChanged: (value) {
+                            if (confirmPasswordHint ==
+                                context.translate('passwords_dont_match')) {
+                              setState(() {
+                                confirmPasswordHint = context
+                                    .translate('please_confirm_password');
+                              });
+                            }
+                          },
+                          onSubmitted: (_) {
+                            FocusScope.of(context).unfocus();
+                          },
+                          context: context,
+                          index: 3,
+                        ),
+
+                        // Role selector
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0, end: 1),
+                          duration: Duration(milliseconds: 500 + 4 * 100),
+                          curve: Curves.easeOut,
+                          builder: (context, value, child) {
+                            return Opacity(
+                              opacity: value,
+                              child: Transform.translate(
+                                offset: Offset(0, 20 * (1 - value)),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                context.translate('select_role'),
+                                style: GoogleFonts.inter(
+                                  fontSize: screenWidth * 0.04,
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.onBackground,
+                                ),
+                              ),
+                              SizedBox(
+                                  height: screenHeight * 0.01 * scaleFactor),
+                              Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: isDarkMode
+                                      ? const Color(0xFF2C2C2C)
+                                      : Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 5,
+                                      offset: Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    context.translate('patient'),
+                                    context.translate('doctor')
+                                  ].map((role) {
+                                    return Expanded(
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedRole = role;
+                                          });
                                         },
-                                        child: Text(
-                                          context.translate('register_step_1'),
-                                          textAlign: TextAlign.center,
-                                          style: GoogleFonts.poppins(
-                                            fontSize: screenWidth * 0.035,
-                                            color: subTextColor,
+                                        child: AnimatedContainer(
+                                          duration: Duration(milliseconds: 300),
+                                          padding: EdgeInsets.symmetric(
+                                            vertical: screenHeight *
+                                                0.015 *
+                                                scaleFactor,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: _selectedRole == role
+                                                ? colorScheme.primary
+                                                : Colors.transparent,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            role,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: _selectedRole == role
+                                                  ? Colors.white
+                                                  : colorScheme.onBackground,
+                                              fontWeight: _selectedRole == role
+                                                  ? FontWeight.bold
+                                                  : FontWeight.normal,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                      // Step indicator
-                                      SizedBox(
-                                          height:
-                                              screenHeight * 0.03 * scaleFactor),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.04 * scaleFactor),
+
+                        // Register button with animation
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0, end: 1),
+                          duration: Duration(milliseconds: 500 + 5 * 100),
+                          curve: Curves.easeOut,
+                          builder: (context, value, child) {
+                            return Opacity(
+                              opacity: value,
+                              child: Transform.translate(
+                                offset: Offset(0, 20 * (1 - value)),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: GestureDetector(
+                            onTap: isRegistering ? null : signUp,
+                            child: AnimatedContainer(
+                              duration: Duration(milliseconds: 300),
+                              width: double.infinity,
+                              height: screenHeight * 0.055,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(30),
+                                color: isRegistering
+                                    ? Colors.grey
+                                    : colorScheme.primary,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: colorScheme.primary.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: isRegistering
+                                    ? SizedBox(
+                                        width: screenWidth * 0.06,
+                                        height: screenWidth * 0.06,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2.5,
+                                        ),
+                                      )
+                                    : Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
-                                          _buildStepIndicator(1, true, isDarkMode),
-                                          _buildStepDivider(false, isDarkMode),
-                                          _buildStepIndicator(
-                                              2, false, isDarkMode),
-                                          _buildStepDivider(false, isDarkMode),
-                                          _buildStepIndicator(
-                                              3, false, isDarkMode),
+                                          Text(
+                                            context.translate('continue'),
+                                            style: GoogleFonts.lexend(
+                                              color: Colors.white,
+                                              fontSize: screenWidth * 0.045,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(width: 8),
+                                          Icon(
+                                            isRTL
+                                                ? Icons.arrow_back
+                                                : Icons.arrow_forward,
+                                            color: Colors.white,
+                                          ),
                                         ],
                                       ),
-                                      SizedBox(
-                                          height:
-                                              screenHeight * 0.04 * scaleFactor),
-                                    ],
-                                  )
-                                else
-                                  SizedBox(height: 5),
-                              ],
+                              ),
                             ),
                           ),
                         ),
 
-                        // Form section with staggered animations
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            // Full name field
-                            _buildAnimatedFormField(
-                              label: context.translate('full_name'),
-                              controller: _fullNameController,
-                              focusNode: _fullNameFocus,
-                              hintText: fullNameHint,
-                              errorText: fullNameHint ==
-                                      context.translate('name_empty_error')
-                                  ? fullNameHint
-                                  : null,
-                              onChanged: (value) {
-                                if (fullNameHint ==
-                                    context.translate('name_empty_error')) {
-                                  setState(() {
-                                    fullNameHint =
-                                        context.translate('please_enter_full_name');
-                                  });
-                                }
-                              },
-                              textInputAction: TextInputAction.next,
-                              onEditingComplete: () =>
-                                  FocusScope.of(context).requestFocus(_emailFocus),
-                              context: context,
-                              index: 0,
-                            ),
+                        SizedBox(height: screenHeight * 0.02 * scaleFactor),
 
-                            // Email field
-                            _buildAnimatedFormField(
-                              label: context.translate('email'),
-                              controller: _emailController,
-                              focusNode: _emailFocus,
-                              hintText: emailHint,
-                              errorText: emailHint ==
-                                          context
-                                              .translate('invalid_email_format') ||
-                                      emailHint ==
-                                          context.translate('email_in_use') ||
-                                      emailHint ==
-                                          context.translate('registration_error') ||
-                                      emailHint ==
-                                          context.translate('general_error')
-                                  ? emailHint
-                                  : null,
-                              keyboardType: TextInputType.emailAddress,
-                              onChanged: (value) {
-                                if (emailHint ==
-                                        context.translate('invalid_email_format') ||
-                                    emailHint ==
-                                        context.translate('email_in_use') ||
-                                    emailHint ==
-                                        context.translate('registration_error') ||
-                                    emailHint ==
-                                        context.translate('general_error')) {
-                                  setState(() {
-                                    emailHint =
-                                        context.translate('please_enter_email');
-                                  });
-                                }
-                              },
-                              textInputAction: TextInputAction.next,
-                              onEditingComplete: () => FocusScope.of(context)
-                                  .requestFocus(_passwordFocus),
-                              context: context,
-                              index: 1,
-                            ),
-
-                            // Password field
-                            _buildAnimatedFormField(
-                              label: context.translate('password'),
-                              controller: _passwordController,
-                              focusNode: _passwordFocus,
-                              hintText: passwordHint,
-                              errorText: passwordHint ==
-                                          context.translate('password_too_short') ||
-                                      passwordHint ==
-                                          context.translate('password_too_weak')
-                                  ? passwordHint
-                                  : null,
-                              obscureText: true,
-                              onChanged: (value) {
-                                if (passwordHint ==
-                                        context.translate('password_too_short') ||
-                                    passwordHint ==
-                                        context.translate('password_too_weak')) {
-                                  setState(() {
-                                    passwordHint =
-                                        context.translate('please_enter_password');
-                                  });
-                                }
-                              },
-                              textInputAction: TextInputAction.next,
-                              onEditingComplete: () => FocusScope.of(context)
-                                  .requestFocus(_confirmPasswordFocus),
-                              context: context,
-                              index: 2,
-                            ),
-
-                            // Confirm password field
-                            _buildAnimatedFormField(
-                              label: context.translate('confirm_password'),
-                              controller: _confirmPasswordController,
-                              focusNode: _confirmPasswordFocus,
-                              hintText: confirmPasswordHint,
-                              errorText: confirmPasswordHint ==
-                                      context.translate('passwords_dont_match')
-                                  ? confirmPasswordHint
-                                  : null,
-                              obscureText: true,
-                              onChanged: (value) {
-                                if (confirmPasswordHint ==
-                                    context.translate('passwords_dont_match')) {
-                                  setState(() {
-                                    confirmPasswordHint = context
-                                        .translate('please_confirm_password');
-                                  });
-                                }
-                              },
-                              onSubmitted: (_) {
-                                FocusScope.of(context).unfocus();
-                              },
-                              context: context,
-                              index: 3,
-                            ),
-
-                            // Role selector
-                            TweenAnimationBuilder<double>(
-                              tween: Tween<double>(begin: 0, end: 1),
-                              duration: Duration(milliseconds: 500 + 4 * 100),
-                              curve: Curves.easeOut,
-                              builder: (context, value, child) {
-                                return Opacity(
-                                  opacity: value,
-                                  child: Transform.translate(
-                                    offset: Offset(0, 20 * (1 - value)),
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    context.translate('select_role').toUpperCase(),
-                                    style: GoogleFonts.orbitron(
-                                      fontSize: screenWidth * 0.04,
-                                      fontWeight: FontWeight.bold,
-                                      color: onSurfaceColor,
-                                      letterSpacing: 1.5,
+                        // Terms and login section with animations
+                        TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0, end: 1),
+                          duration: Duration(milliseconds: 500 + 6 * 100),
+                          curve: Curves.easeOut,
+                          builder: (context, value, child) {
+                            return Opacity(
+                              opacity: value,
+                              child: child,
+                            );
+                          },
+                          child: Column(
+                            children: [
+                              // Terms and conditions text
+                              Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: screenWidth * 0.05),
+                                  child: Text(
+                                    context.translate('terms_agreement'),
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.lexend(
+                                      color: colorScheme.onBackground
+                                          .withOpacity(0.7),
+                                      fontSize: screenWidth * 0.03,
                                     ),
-                                  ),
-                                  SizedBox(
-                                      height: screenHeight * 0.01 * scaleFactor),
-                                  Container(
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: cardColor,
-                                      borderRadius: BorderRadius.circular(15),
-                                      border: Border.all(
-                                        color: biotechCyan.withOpacity(isDarkMode ? 0.1 : 0.3),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(15),
-                                      child: BackdropFilter(
-                                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                                        child: Row(
-                                          children: [
-                                            context.translate('patient'),
-                                            context.translate('doctor')
-                                          ].map((role) {
-                                            return Expanded(
-                                              child: GestureDetector(
-                                                onTap: () {
-                                                  setState(() {
-                                                    _selectedRole = role;
-                                                  });
-                                                },
-                                                child: AnimatedContainer(
-                                                  duration: Duration(milliseconds: 300),
-                                                  padding: EdgeInsets.symmetric(
-                                                    vertical: screenHeight *
-                                                        0.015 *
-                                                        scaleFactor,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: _selectedRole == role
-                                                        ? biotechCyan
-                                                        : Colors.transparent,
-                                                  ),
-                                                  child: Text(
-                                                    role.toUpperCase(),
-                                                    textAlign: TextAlign.center,
-                                                    style: GoogleFonts.orbitron(
-                                                      color: _selectedRole == role
-                                                          ? biotechBlack
-                                                          : onSurfaceColor,
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 12,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(height: screenHeight * 0.04 * scaleFactor),
-
-                            // Register button with animation
-                            TweenAnimationBuilder<double>(
-                              tween: Tween<double>(begin: 0, end: 1),
-                              duration: Duration(milliseconds: 500 + 5 * 100),
-                              curve: Curves.easeOut,
-                              builder: (context, value, child) {
-                                return Opacity(
-                                  opacity: value,
-                                  child: Transform.translate(
-                                    offset: Offset(0, 20 * (1 - value)),
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: GestureDetector(
-                                onTap: isRegistering ? null : signUp,
-                                child: AnimatedContainer(
-                                  duration: Duration(milliseconds: 300),
-                                  width: double.infinity,
-                                  height: screenHeight * 0.055,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(30),
-                                    color: isRegistering
-                                        ? Colors.grey
-                                        : biotechCyan,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: biotechCyan.withOpacity(0.3),
-                                        blurRadius: 8,
-                                        offset: Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Center(
-                                    child: isRegistering
-                                        ? SizedBox(
-                                            width: screenWidth * 0.06,
-                                            height: screenWidth * 0.06,
-                                            child: CircularProgressIndicator(
-                                              color: biotechBlack,
-                                              strokeWidth: 2.5,
-                                            ),
-                                          )
-                                        : Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                context.translate('continue').toUpperCase(),
-                                                style: GoogleFonts.orbitron(
-                                                  color: biotechBlack,
-                                                  fontSize: screenWidth * 0.045,
-                                                  fontWeight: FontWeight.bold,
-                                                  letterSpacing: 1.5,
-                                                ),
-                                              ),
-                                              SizedBox(width: 8),
-                                              Icon(
-                                                isRTL
-                                                    ? Icons.arrow_back
-                                                    : Icons.arrow_forward,
-                                                color: biotechBlack,
-                                              ),
-                                            ],
-                                          ),
                                   ),
                                 ),
                               ),
-                            ),
 
-                            SizedBox(height: screenHeight * 0.02 * scaleFactor),
+                              SizedBox(
+                                  height: screenHeight * 0.02 * scaleFactor),
 
-                            // Terms and login section with animations
-                            TweenAnimationBuilder<double>(
-                              tween: Tween<double>(begin: 0, end: 1),
-                              duration: Duration(milliseconds: 500 + 6 * 100),
-                              curve: Curves.easeOut,
-                              builder: (context, value, child) {
-                                return Opacity(
-                                  opacity: value,
-                                  child: child,
-                                );
-                              },
-                              child: Column(
-                                children: [
-                                  // Terms and conditions text
-                                  Center(
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: screenWidth * 0.05),
-                                      child: Text(
-                                        context.translate('terms_agreement'),
-                                        textAlign: TextAlign.center,
-                                        style: GoogleFonts.poppins(
-                                          color: subTextColor,
-                                          fontSize: screenWidth * 0.03,
-                                        ),
+                              // Login link
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: <Widget>[
+                                  Text(
+                                    context.translate('already_have_account'),
+                                    style: GoogleFonts.lexend(
+                                        fontSize: screenWidth * 0.035,
+                                        color: colorScheme.onBackground),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                    },
+                                    child: Text(
+                                      context.translate('login'),
+                                      style: GoogleFonts.lexend(
+                                        color: colorScheme.primary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: screenWidth * 0.035,
                                       ),
                                     ),
                                   ),
-
-                                  SizedBox(
-                                      height: screenHeight * 0.02 * scaleFactor),
-
-                                  // Login link
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: <Widget>[
-                                      Text(
-                                        context.translate('already_have_account'),
-                                        style: GoogleFonts.poppins(
-                                            fontSize: screenWidth * 0.035,
-                                            color: onSurfaceColor),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.pop(context);
-                                        },
-                                        child: Text(
-                                          context.translate('login'),
-                                          style: GoogleFonts.poppins(
-                                            color: biotechCyan,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: screenWidth * 0.035,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
                                 ],
                               ),
-                            ),
-                            SizedBox(height: screenHeight * 0.01 * scaleFactor),
-                          ],
+                            ],
+                          ),
                         ),
+                        SizedBox(height: screenHeight * 0.01 * scaleFactor),
                       ],
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -807,10 +782,7 @@ class _SignupPageState extends State<SignupPage>
   }) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    
-    final cardColor = isDarkMode ? Colors.white.withOpacity(0.03) : Colors.white.withOpacity(0.7);
-    final onSurfaceColor = isDarkMode ? Colors.white : biotechBlack;
-
+    final colorScheme = Theme.of(context).colorScheme;
     final screenSize = MediaQuery.of(context).size;
     final screenHeight = screenSize.height;
     final screenWidth = screenSize.width;
@@ -833,66 +805,68 @@ class _SignupPageState extends State<SignupPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label.toUpperCase(),
-            style: GoogleFonts.orbitron(
+            label,
+            style: GoogleFonts.inter(
                 fontSize: screenWidth * 0.04,
                 fontWeight: FontWeight.bold,
-                color: biotechCyan,
-                letterSpacing: 1.5),
+                color: colorScheme.onBackground),
           ),
           SizedBox(height: screenHeight * 0.01 * scaleFactor),
           AnimatedContainer(
             duration: Duration(milliseconds: 300),
             decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(15),
+              color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey[200],
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: focusNode.hasFocus
+                      ? colorScheme.primary.withOpacity(0.3)
+                      : Colors.transparent,
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
               border: Border.all(
                 color: focusNode.hasFocus
-                    ? biotechCyan
-                    : biotechCyan.withOpacity(isDarkMode ? 0.1 : 0.3),
+                    ? colorScheme.primary
+                    : Colors.transparent,
                 width: 1.5,
               ),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(15),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                child: TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  obscureText: obscureText,
-                  keyboardType: keyboardType,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.transparent,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      borderSide: BorderSide.none,
-                    ),
-                    hintText: hintText,
-                    hintStyle: GoogleFonts.poppins(
-                        color: errorText != null
-                            ? Colors.red
-                            : isDarkMode
-                                ? Colors.white38
-                                : Colors.black38,
-                        fontSize: screenWidth * 0.035),
-                    contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: screenHeight * 0.015 * scaleFactor),
-                    errorText: errorText,
-                    errorStyle: GoogleFonts.poppins(
-                      color: Colors.red,
-                      fontSize: screenWidth * 0.03,
-                    ),
-                  ),
-                  style: GoogleFonts.poppins(color: onSurfaceColor),
-                  onChanged: onChanged,
-                  textInputAction: textInputAction,
-                  onEditingComplete: onEditingComplete,
-                  onSubmitted: onSubmitted,
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              obscureText: obscureText,
+              keyboardType: keyboardType,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.transparent,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                hintText: hintText,
+                hintStyle: TextStyle(
+                    color: errorText != null
+                        ? Colors.red
+                        : isDarkMode
+                            ? const Color(0xFFAAAAAA)
+                            : Colors.grey,
+                    fontSize: screenWidth * 0.035),
+                contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: screenHeight * 0.015 * scaleFactor),
+                errorText: errorText,
+                errorStyle: TextStyle(
+                  color: Colors.red,
+                  fontSize: screenWidth * 0.03,
                 ),
               ),
+              style: TextStyle(color: colorScheme.onBackground),
+              onChanged: onChanged,
+              textInputAction: textInputAction,
+              onEditingComplete: onEditingComplete,
+              onSubmitted: onSubmitted,
             ),
           ),
           SizedBox(height: screenHeight * 0.02 * scaleFactor),
@@ -902,26 +876,28 @@ class _SignupPageState extends State<SignupPage>
   }
 
   // Helper method to build step indicator circles
-  Widget _buildStepIndicator(int step, bool isActive, bool isDarkMode) {
+  Widget _buildStepIndicator(int step, bool isActive, ColorScheme colorScheme) {
     return AnimatedContainer(
       duration: Duration(milliseconds: 300),
       width: 30,
       height: 30,
       decoration: BoxDecoration(
-        color: isActive ? biotechCyan : Colors.transparent,
+        color: isActive ? colorScheme.primary : Colors.transparent,
         shape: BoxShape.circle,
         border: Border.all(
-          color: biotechCyan.withOpacity(isActive ? 1.0 : 0.3),
+          color: isActive
+              ? colorScheme.primary
+              : colorScheme.onBackground.withOpacity(0.3),
           width: 2,
         ),
       ),
       child: Center(
         child: Text(
           step.toString(),
-          style: GoogleFonts.orbitron(
+          style: TextStyle(
             color: isActive
-                ? biotechBlack
-                : biotechCyan.withOpacity(0.5),
+                ? Colors.white
+                : colorScheme.onBackground.withOpacity(0.5),
             fontWeight: FontWeight.bold,
             fontSize: 14,
           ),
@@ -931,13 +907,14 @@ class _SignupPageState extends State<SignupPage>
   }
 
   // Helper method to build dividers between step indicators
-  Widget _buildStepDivider(bool isActive, bool isDarkMode) {
+  Widget _buildStepDivider(bool isActive, ColorScheme colorScheme) {
     return AnimatedContainer(
       duration: Duration(milliseconds: 300),
       width: 40,
       height: 2,
-      color: biotechCyan.withOpacity(isActive ? 1.0 : 0.2),
+      color: isActive
+          ? colorScheme.primary
+          : colorScheme.onBackground.withOpacity(0.2),
     );
   }
 }
-

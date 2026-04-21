@@ -6,7 +6,7 @@ import 'package:test_1/utils/language_provider.dart';
 
 class SpecializationsCards extends StatefulWidget {
   final String category;
-  final String icon;
+  final IconData icon;
   final Color color;
   final String? translationKey;
 
@@ -126,15 +126,10 @@ class _SpecializationsCardsState extends State<SpecializationsCards>
                               BorderRadius.circular(screenSize.width * 0.04),
                         ),
                         child: Center(
-                          child: Image.asset(
+                          child: Icon(
                             widget.icon,
-                            width: iconSize,
-                            height: iconSize,
-                            color: isDarkMode ? Colors.white : null,
-                            errorBuilder: (context, error, stackTrace) => Icon(
-                                Icons.error,
-                                color: Colors.red,
-                                size: iconSize),
+                            size: iconSize,
+                            color: Colors.white,
                           ),
                         ),
                       ),

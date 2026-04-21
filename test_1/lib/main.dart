@@ -1,7 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:test_1/firebase_options.dart';
 import 'package:test_1/pages/splash_screen_1.dart';
 import 'package:test_1/utils/ifLogin.dart';
@@ -41,6 +43,15 @@ void main() async {
   } catch (e) {
     debugPrint("Firebase initialization error: $e");
   }
+
+  // Load environment variables
+  await dotenv.load(fileName: '.env');
+
+  // Initialize Supabase
+  await Supabase.initialize(
+    url: dotenv.env['NEXT_PUBLIC_SUPABASE_URL'] ?? '',
+    anonKey: dotenv.env['NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'] ?? '',
+  );
 
   // Initialize notification service
   try {

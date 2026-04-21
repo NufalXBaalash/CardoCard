@@ -1,15 +1,13 @@
-import 'dart:ui';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:test_1/utils/theme_provider.dart';
 import 'package:test_1/utils/language_provider.dart';
 import 'package:test_1/utils/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:test_1/database/supabase_config.dart';
 import 'package:test_1/pages/doctor_listing_page.dart';
+import 'dart:convert';
 
 class AppointmentsPage extends StatefulWidget {
   const AppointmentsPage({super.key});
@@ -20,43 +18,81 @@ class AppointmentsPage extends StatefulWidget {
 
 class _AppointmentsPageState extends State<AppointmentsPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   String userName = '';
   String? profileImageBase64;
   bool _isLoading = true;
+  List<Map<String, dynamic>> _doctors = [];
+  List<Map<String, dynamic>> _appointments = [];
 
   final List<Map<String, dynamic>> _specialties = [
-    {'name': 'Neurologist', 'icon': Icons.psychology, 'color': Color(0xFF4FC3F7), 'key': 'neurology'},
-    {'name': 'Cardiologist', 'icon': Icons.favorite, 'color': Color(0xFFFF5252), 'key': 'cardiologist'},
-    {'name': 'Orthopedist', 'icon': Icons.accessibility_new, 'color': Color(0xFFFFB74D), 'key': 'orthopedics'},
-    {'name': 'Pulmonologist', 'icon': Icons.air, 'color': Color(0xFF9575CD), 'key': 'pulmonology'},
-    {'name': 'Dentist', 'icon': Icons.face, 'color': Color(0xFF81C784), 'key': 'dentistry'},
-    {'name': 'Pediatrician', 'icon': Icons.child_care, 'color': Color(0xFFFFD54F), 'key': 'pediatrician'},
+    {'name': 'Neurologist', 'icon': Icons.psychology, 'color': Color(0xFFE28BFF)},
+    {'name': 'Cardiologist', 'icon': Icons.favorite, 'color': Color(0xFFff8484)},
+    {'name': 'Orthopedist', 'icon': Icons.accessibility_new, 'color': Color(0xFFFFD062)},
+    {'name': 'Pulmonologist', 'icon': Icons.air, 'color': Color(0xFFFF8F7C)},
+    {'name': 'Dentist', 'icon': Icons.face, 'color': Color(0xFF7EAFFF)},
+    {'name': 'Pediatrician', 'icon': Icons.child_care, 'color': Color(0xFFAEF99D)},
   ];
 
   @override
   void initState() {
     super.initState();
-    _getUserData();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      await Future.wait([
+        _getUserData(),
+        _fetchDoctors(),
+        _fetchAppointments(),
+      ]);
+    } catch (e) {
+      debugPrint('Error loading data: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _getUserData() async {
     try {
-      User? currentUser = _auth.currentUser;
+      final currentUser = _auth.currentUser;
       if (currentUser != null) {
-        final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
-        if (userDoc.exists) {
-          setState(() {
-            userName = userDoc.data()?['fullName'] ?? 'User';
-            profileImageBase64 = userDoc.data()?['profileImageBase64'];
-          });
-        }
+        // Try Supabase first, fallback to minimal data
+        setState(() {
+          userName = currentUser.displayName ?? 'User';
+        });
       }
     } catch (e) {
       debugPrint('Error fetching user data: $e');
-    } finally {
-      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _fetchDoctors() async {
+    try {
+      final doctors = await SupabaseService.fetchDoctors();
+      if (mounted) {
+        setState(() => _doctors = doctors);
+      }
+    } catch (e) {
+      debugPrint('Error fetching doctors: $e');
+    }
+  }
+
+  Future<void> _fetchAppointments() async {
+    try {
+      final userId = _auth.currentUser?.uid;
+      if (userId == null) return;
+      final appointments = await SupabaseService.fetchUserAppointments(
+        userId,
+        status: 'scheduled',
+      );
+      if (mounted) {
+        setState(() => _appointments = appointments);
+      }
+    } catch (e) {
+      debugPrint('Error fetching appointments: $e');
     }
   }
 
@@ -64,227 +100,147 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    
-    // Theme aware colors
-    final biotechCyan = const Color(0xFF00E5FF);
-    final biotechCyanDeep = const Color(0xFF00B8D4); // WCAG-compliant for Light Mode
-    final dynamicCyan = isDarkMode ? biotechCyan : biotechCyanDeep;
-    
-    final scaffoldBg = isDarkMode ? const Color(0xFF0F0F0F) : const Color(0xFFF5F7FA);
-    final cardBg = isDarkMode ? Colors.white.withOpacity(0.03) : Colors.white;
-    final textColor = isDarkMode ? Colors.white : const Color(0xFF0F0F0F);
-    final subTextColor = isDarkMode ? Colors.white70 : Colors.black87;
-    final borderColor = isDarkMode ? Colors.white.withOpacity(0.1) : dynamicCyan.withOpacity(0.2);
+    final colorScheme = Theme.of(context).colorScheme;
+    final languageProvider = Provider.of<LanguageProvider>(context);
+    final isRTL = languageProvider.isRTL;
+    final screenSize = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: scaffoldBg,
+      backgroundColor: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F7FA),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: dynamicCyan))
-          : Stack(
-              children: [
-                // Background Glow (Subtle)
-                Positioned(
-                  top: -50,
-                  left: -50,
-                  child: Container(
-                    width: 250,
-                    height: 250,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: dynamicCyan.withOpacity(isDarkMode ? 0.05 : 0.08),
-                    ),
-                  ),
-                ),
-                SafeArea(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeader(dynamicCyan, textColor, subTextColor, isDarkMode),
-                        const SizedBox(height: 25),
-                        _buildSearchBar(dynamicCyan, cardBg, borderColor, isDarkMode),
-                        const SizedBox(height: 30),
-                        _buildSectionTitle(context.translate('specialties').toUpperCase(), dynamicCyan, textColor),
-                        const SizedBox(height: 15),
-                        _buildSpecialtiesGrid(dynamicCyan, cardBg, borderColor, textColor, isDarkMode),
-                        const SizedBox(height: 35),
-                        _buildSectionTitle(context.translate('upcoming_appointment').toUpperCase(), dynamicCyan, textColor),
-                        const SizedBox(height: 15),
-                        _buildGlassAppointmentCard(dynamicCyan, isDarkMode, textColor, subTextColor),
-                        const SizedBox(height: 35),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _buildSectionTitle(context.translate('top_specialists').toUpperCase(), dynamicCyan, textColor),
-                            TextButton(
-                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const DoctorListingPage())),
-                              child: Text(context.translate('see_all').toUpperCase(), 
-                                style: GoogleFonts.orbitron(color: dynamicCyan, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        _buildRecentDoctorsScroll(dynamicCyan, cardBg, borderColor, textColor, subTextColor, isDarkMode),
-                        const SizedBox(height: 100),
+          ? Center(child: CircularProgressIndicator(color: colorScheme.primary))
+          : RefreshIndicator(
+              color: colorScheme.primary,
+              onRefresh: _loadData,
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(isDarkMode, colorScheme, screenSize),
+                      SizedBox(height: 20),
+                      _buildSearchBar(isDarkMode, colorScheme, screenSize),
+                      SizedBox(height: 24),
+                      _buildSpecialtiesSection(isDarkMode, colorScheme, screenSize),
+                      SizedBox(height: 24),
+                      if (_appointments.isNotEmpty) ...[
+                        _buildSectionTitle(context.translate('upcoming_appointments'), isDarkMode, colorScheme),
+                        SizedBox(height: 12),
+                        _buildAppointmentsList(isDarkMode, colorScheme, screenSize),
+                        SizedBox(height: 24),
                       ],
-                    ),
+                      _buildDoctorsSection(isDarkMode, colorScheme, screenSize),
+                      SizedBox(height: 80),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
     );
   }
 
-  Widget _buildHeader(Color primary, Color text, Color subText, bool isDark) {
+  Widget _buildHeader(bool isDarkMode, ColorScheme colorScheme, Size screenSize) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('BIO-ID SYSTEM ACTIVE', 
-              style: GoogleFonts.orbitron(
-                color: primary.withOpacity(0.8), 
-                fontSize: 10, 
-                letterSpacing: 2,
-                fontWeight: FontWeight.bold
-              )
-            ),
-            const SizedBox(height: 4),
-            Text(userName.toUpperCase(), 
-              style: GoogleFonts.orbitron(
-                color: text, 
-                fontSize: 22, 
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1
-              )
-            ),
-          ],
-        ),
-        Container(
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: primary.withOpacity(0.5), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: primary.withOpacity(0.2), 
-                blurRadius: 15,
-                spreadRadius: 2
-              )
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.translate('hello'),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  color: isDarkMode ? Colors.white54 : Colors.black45,
+                ),
+              ),
+              Text(
+                userName,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                maxLines: 1,
+              ),
             ],
           ),
-          child: CircleAvatar(
-            radius: 28,
-            backgroundColor: isDark ? Colors.grey[900] : Colors.white,
-            backgroundImage: profileImageBase64 != null && profileImageBase64!.isNotEmpty
-              ? MemoryImage(base64Decode(profileImageBase64!)) 
-              : const AssetImage("lib/images/06a2fecd0ffb295fe3f53cba33b95b26.jpg") as ImageProvider,
-          ),
+        ),
+        Row(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                icon: Icon(Icons.notifications_outlined,
+                    color: isDarkMode ? Colors.white70 : Colors.black54, size: 22),
+                onPressed: () {},
+              ),
+            ),
+            SizedBox(width: 12),
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: AppTheme.cardoBlue.withOpacity(0.15),
+              backgroundImage: profileImageBase64 != null
+                  ? MemoryImage(base64Decode(profileImageBase64!))
+                  : null,
+              child: profileImageBase64 == null
+                  ? Icon(Icons.person, color: AppTheme.cardoBlue, size: 24)
+                  : null,
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildSearchBar(Color primary, Color bg, Color border, bool isDark) {
+  Widget _buildSearchBar(bool isDarkMode, ColorScheme colorScheme, Size screenSize) {
     return Container(
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: border),
+        color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: TextField(
-        style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black, fontSize: 14),
         decoration: InputDecoration(
-          hintText: 'SEARCH CLINIC OR DOCTOR...',
-          hintStyle: GoogleFonts.orbitron(
-            color: isDark ? Colors.white24 : Colors.black26, 
-            fontSize: 10, 
-            letterSpacing: 1.5
+          hintText: context.translate('search_doctor'),
+          hintStyle: TextStyle(
+            color: isDarkMode ? Colors.white38 : Colors.black38,
+            fontSize: 15,
           ),
-          prefixIcon: Icon(Icons.search_rounded, color: primary, size: 22),
-          suffixIcon: Icon(Icons.tune_rounded, color: primary.withOpacity(0.6), size: 20),
+          prefixIcon: Icon(Icons.search,
+              color: isDarkMode ? Colors.white38 : Colors.black38, size: 22),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title, Color primary, Color text) {
-    return Row(
-      children: [
-        Container(
-          width: 4, 
-          height: 18, 
-          decoration: BoxDecoration(
-            color: primary,
-            borderRadius: BorderRadius.circular(2),
-            boxShadow: [BoxShadow(color: primary.withOpacity(0.5), blurRadius: 8)]
-          ),
+        style: TextStyle(
+          color: isDarkMode ? Colors.white : Colors.black,
+          fontSize: 15,
         ),
-        const SizedBox(width: 12),
-        Text(title, style: GoogleFonts.orbitron(color: text, fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.5)),
-      ],
-    );
-  }
-
-  Widget _buildSpecialtiesGrid(Color primary, Color bg, Color border, Color text, bool isDark) {
-    return SizedBox(
-      height: 120,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: _specialties.length,
-        itemBuilder: (context, index) {
-          final s = _specialties[index];
-          return Container(
-            width: 100,
-            margin: const EdgeInsets.only(right: 15, bottom: 5),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: border),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                )
-              ]
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: (s['color'] as Color).withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(s['icon'], color: s['color'], size: 26),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  context.translate(s['key']).toUpperCase(), 
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.orbitron(
-                    fontSize: 8, 
-                    color: text.withOpacity(0.8), 
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5
-                  )
-                ),
-              ],
+        onSubmitted: (query) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DoctorListingPage(specialtyFilter: query),
             ),
           );
         },
@@ -292,245 +248,687 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
     );
   }
 
-  Widget _buildGlassAppointmentCard(Color primary, bool isDark, Color text, Color subText) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isDark 
-            ? [primary.withOpacity(0.15), primary.withOpacity(0.05)]
-            : [primary.withOpacity(0.1), Colors.white],
-        ),
-        border: Border.all(color: primary.withOpacity(0.3), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: primary.withOpacity(0.1),
-            blurRadius: 25,
-            spreadRadius: -5,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 60, height: 60,
-                      decoration: BoxDecoration(
-                        color: primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: primary.withOpacity(0.2)),
-                      ),
-                      child: Icon(Icons.medical_information_rounded, color: primary, size: 30),
-                    ),
-                    const SizedBox(width: 18),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('DR. JENNIFER SMITH', 
-                            style: GoogleFonts.orbitron(
-                              color: text, 
-                              fontWeight: FontWeight.bold, 
-                              fontSize: 16,
-                              letterSpacing: 0.5
-                            )
-                          ),
-                          const SizedBox(height: 4),
-                          Text('ORTHOPEDIC SPECIALIST', 
-                            style: GoogleFonts.poppins(
-                              color: isDark ? primary.withOpacity(0.8) : primary,
-                              fontSize: 11, 
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1
-                            )
-                          ),
-                        ],
+  Widget _buildSpecialtiesSection(bool isDarkMode, ColorScheme colorScheme, Size screenSize) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(context.translate('specialities'), isDarkMode, colorScheme),
+        SizedBox(height: 12),
+        SizedBox(
+          height: 100,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _specialties.length,
+            itemBuilder: (context, index) {
+              final specialty = _specialties[index];
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DoctorListingPage(
+                        specialtyFilter: specialty['name'],
                       ),
                     ),
-                    _buildPulseIndicator(primary),
-                  ],
-                ),
-                const SizedBox(height: 25),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.black.withOpacity(0.2) : Colors.white.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: primary.withOpacity(0.1)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  );
+                },
+                child: Container(
+                  width: 76,
+                  margin: EdgeInsets.only(right: 12),
+                  child: Column(
                     children: [
-                      _buildIconInfo(Icons.calendar_today_rounded, '07 SEP', primary, text),
-                      Container(width: 1, height: 24, color: primary.withOpacity(0.2)),
-                      _buildIconInfo(Icons.access_time_filled_rounded, '10:30 AM', primary, text),
-                      Container(width: 1, height: 24, color: primary.withOpacity(0.2)),
-                      _buildIconInfo(Icons.location_on_rounded, 'UNIT-4', primary, text),
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: specialty['color'].withOpacity(isDarkMode ? 0.2 : 0.15),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(
+                          specialty['icon'],
+                          color: specialty['color'],
+                          size: 28,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        specialty['name'],
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: isDarkMode ? Colors.white70 : Colors.black87,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildPulseIndicator(Color primary) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: primary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: primary.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6, height: 6,
-            decoration: BoxDecoration(color: primary, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 6),
-          Text('LIVE', style: GoogleFonts.orbitron(color: primary, fontSize: 9, fontWeight: FontWeight.w900)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildIconInfo(IconData icon, String text, Color primary, Color textColor) {
-    return Column(
-      children: [
-        Icon(icon, color: primary, size: 20),
-        const SizedBox(height: 6),
-        Text(text, style: GoogleFonts.orbitron(color: textColor, fontSize: 10, fontWeight: FontWeight.bold)),
       ],
     );
   }
 
-  Widget _buildRecentDoctorsScroll(Color primary, Color bg, Color border, Color text, Color subText, bool isDark) {
+  Widget _buildAppointmentsList(bool isDarkMode, ColorScheme colorScheme, Size screenSize) {
     return SizedBox(
-      height: 200,
+      height: 160,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        itemCount: 4,
+        itemCount: _appointments.length,
         itemBuilder: (context, index) {
-          return Container(
-            width: 280,
-            margin: const EdgeInsets.only(right: 18, bottom: 10, top: 5),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: border),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
+          final appointment = _appointments[index];
+          final doctor = appointment['doctors'] as Map<String, dynamic>?;
+          return _buildAppointmentCard(appointment, doctor, isDarkMode, colorScheme, screenSize);
+        },
+      ),
+    );
+  }
+
+  Widget _buildAppointmentCard(
+    Map<String, dynamic> appointment,
+    Map<String, dynamic>? doctor,
+    bool isDarkMode,
+    ColorScheme colorScheme,
+    Size screenSize,
+  ) {
+    return Container(
+      width: screenSize.width * 0.75,
+      margin: EdgeInsets.only(right: 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppTheme.cardoBlue, AppTheme.cardoDarkBlue],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.cardoBlue.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: Colors.white.withOpacity(0.2),
+                child: Icon(Icons.person, color: Colors.white, size: 24),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      doctor?['name'] ?? 'Doctor',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      doctor?['specialty'] ?? '',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.85),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 14),
+          Divider(color: Colors.white.withOpacity(0.2)),
+          SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(Icons.calendar_today, color: Colors.white.withOpacity(0.9), size: 15),
+              SizedBox(width: 8),
+              Text(
+                appointment['appointment_date'] ?? '',
+                style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.9)),
+              ),
+            ],
+          ),
+          SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(Icons.access_time, color: Colors.white.withOpacity(0.9), size: 15),
+              SizedBox(width: 8),
+              Text(
+                '${appointment['start_time'] ?? ''} - ${appointment['end_time'] ?? ''}',
+                style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.9)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDoctorsSection(bool isDarkMode, ColorScheme colorScheme, Size screenSize) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildSectionTitle(context.translate('make_an_appointment'), isDarkMode, colorScheme),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const DoctorListingPage()),
+                );
+              },
+              child: Text(
+                context.translate('see_all'),
+                style: TextStyle(
+                  color: AppTheme.cardoBlue,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        _doctors.isEmpty
+            ? _buildEmptyDoctorsState(isDarkMode, colorScheme, screenSize)
+            : _buildDoctorsList(isDarkMode, colorScheme, screenSize),
+      ],
+    );
+  }
+
+  Widget _buildEmptyDoctorsState(bool isDarkMode, ColorScheme colorScheme, Size screenSize) {
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.medical_services_outlined,
+                size: 48, color: Colors.grey.withOpacity(0.5)),
+            SizedBox(height: 12),
+            Text(
+              'No doctors available yet',
+              style: TextStyle(
+                fontSize: 15,
+                color: isDarkMode ? Colors.white54 : Colors.black45,
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Add doctors in Supabase to get started',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDarkMode ? Colors.white38 : Colors.black38,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDoctorsList(bool isDarkMode, ColorScheme colorScheme, Size screenSize) {
+    return SizedBox(
+      height: 210,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _doctors.length,
+        itemBuilder: (context, index) {
+          final doctor = _doctors[index];
+          return _buildDoctorCard(doctor, isDarkMode, colorScheme, screenSize);
+        },
+      ),
+    );
+  }
+
+  Widget _buildDoctorCard(
+    Map<String, dynamic> doctor,
+    bool isDarkMode,
+    ColorScheme colorScheme,
+    Size screenSize,
+  ) {
+    final double rating = (doctor['rating'] ?? 0).toDouble();
+    final int reviewCount = doctor['review_count'] ?? 0;
+    final double price = (doctor['price'] ?? 0).toDouble();
+
+    return Container(
+      width: screenSize.width * 0.7,
+      margin: EdgeInsets.only(right: 14),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: AppTheme.cardoBlue.withOpacity(0.1),
+                  child: Icon(Icons.person, color: AppTheme.cardoBlue, size: 24),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        doctor['name'] ?? 'Doctor',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode ? Colors.white : Colors.black,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        doctor['specialty'] ?? '',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDarkMode ? Colors.white60 : Colors.black54,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                if (rating > 0)
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.star, color: Colors.amber, size: 14),
+                        SizedBox(width: 3),
+                        Text(
+                          rating.toStringAsFixed(1),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            SizedBox(height: 10),
+            if (doctor['organization'] != null)
+              Row(
+                children: [
+                  Icon(Icons.location_on_outlined,
+                      size: 14, color: isDarkMode ? Colors.white38 : Colors.black38),
+                  SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      doctor['organization'],
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDarkMode ? Colors.white38 : Colors.black45,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            Spacer(),
+            Row(
+              children: [
+                if (price > 0) ...[
+                  Text(
+                    '\$${price.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.cardoBlue,
+                    ),
+                  ),
+                  Text(
+                    ' / visit',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDarkMode ? Colors.white38 : Colors.black38,
+                    ),
+                  ),
+                  Spacer(),
+                ] else
+                  Spacer(),
+                ElevatedButton(
+                  onPressed: () => _showBookingDialog(doctor),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.cardoBlue,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    context.translate('book_now'),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ],
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showBookingDialog(Map<String, dynamic> doctor) {
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+    List<Map<String, dynamic>> availableSlots = [];
+    bool isLoadingSlots = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
               child: Column(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: primary.withOpacity(0.3)),
-                        ),
-                        child: CircleAvatar(
-                          radius: 24,
-                          backgroundColor: primary.withOpacity(0.05),
-                          child: Icon(Icons.person_rounded, color: primary, size: 28)
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  Container(
+                    margin: EdgeInsets.only(top: 10),
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            Text('DR. ALEX WARNER', 
-                              style: GoogleFonts.orbitron(
-                                color: text, 
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                letterSpacing: 0.5
-                              )
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: AppTheme.cardoBlue.withOpacity(0.1),
+                              child: Icon(Icons.person, color: AppTheme.cardoBlue),
                             ),
-                            Text('NEUROLOGY • 12Y EXP', 
-                              style: GoogleFonts.poppins(
-                                color: isDark ? primary.withOpacity(0.7) : primary,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700
-                              )
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    doctor['name'] ?? 'Doctor',
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(
+                                    doctor['specialty'] ?? '',
+                                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 20),
+                        Text(
+                          'Select Date',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                        SizedBox(height: 10),
+                        SizedBox(
+                          height: 70,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: 7,
+                            itemBuilder: (context, index) {
+                              final date = DateTime.now().add(Duration(days: index + 1));
+                              final isSelected = date.day == selectedDate.day &&
+                                  date.month == selectedDate.month;
+                              return GestureDetector(
+                                onTap: () async {
+                                  setDialogState(() {
+                                    selectedDate = date;
+                                    isLoadingSlots = true;
+                                  });
+                                  try {
+                                    final slots = await SupabaseService.fetchDoctorAvailability(
+                                      doctor['id'],
+                                      date.weekday - 1, // 0=Mon, 6=Sun
+                                    );
+                                    setDialogState(() {
+                                      availableSlots = slots;
+                                      isLoadingSlots = false;
+                                    });
+                                  } catch (e) {
+                                    setDialogState(() {
+                                      availableSlots = [];
+                                      isLoadingSlots = false;
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  width: 52,
+                                  margin: EdgeInsets.only(right: 10),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? AppTheme.cardoBlue : Colors.transparent,
+                                    border: Border.all(
+                                      color: isSelected ? AppTheme.cardoBlue : Colors.grey.withOpacity(0.3),
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        DateFormat('EEE').format(date),
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: isSelected
+                                              ? Colors.white.withOpacity(0.8)
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        '${date.day}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected ? Colors.white : null,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          height: 45,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            gradient: LinearGradient(colors: [primary, primary.withOpacity(0.8)]),
-                            boxShadow: [BoxShadow(color: primary.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))]
-                          ),
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                            onPressed: () {},
-                            child: Text('INITIATE SCHEDULE', 
-                              style: GoogleFonts.orbitron(
-                                fontSize: 10, 
-                                color: Colors.black,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1
+                  Expanded(
+                    child: isLoadingSlots
+                        ? Center(child: CircularProgressIndicator(color: AppTheme.cardoBlue))
+                        : availableSlots.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.event_busy, size: 48, color: Colors.grey),
+                                    SizedBox(height: 12),
+                                    Text(
+                                      'No availability on this day',
+                                      style: TextStyle(color: Colors.grey, fontSize: 15),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Try selecting a different date',
+                                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                                    ),
+                                  ],
+                                ),
                               )
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        width: 45, height: 45,
-                        decoration: BoxDecoration(
-                          color: primary.withOpacity(0.1),
-                          border: Border.all(color: primary.withOpacity(0.2)), 
-                          borderRadius: BorderRadius.circular(14)
-                        ),
-                        child: Icon(Icons.message_rounded, color: primary, size: 20),
-                      )
-                    ],
-                  )
+                            : GridView.builder(
+                                padding: EdgeInsets.symmetric(horizontal: 20),
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3,
+                                  crossAxisSpacing: 10,
+                                  mainAxisSpacing: 10,
+                                  childAspectRatio: 2.5,
+                                ),
+                                itemCount: availableSlots.length,
+                                itemBuilder: (context, slotIndex) {
+                                  final slot = availableSlots[slotIndex];
+                                  return ElevatedButton(
+                                    onPressed: () => _confirmBooking(
+                                      doctor,
+                                      selectedDate,
+                                      slot['start_time'],
+                                      slot['end_time'],
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.cardoBlue.withOpacity(0.1),
+                                      foregroundColor: AppTheme.cardoBlue,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                        side: BorderSide(
+                                          color: AppTheme.cardoBlue.withOpacity(0.3),
+                                        ),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      slot['start_time'],
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                  ),
                 ],
               ),
-            ),
-          );
-        },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmBooking(
+    Map<String, dynamic> doctor,
+    DateTime date,
+    String startTime,
+    String endTime,
+  ) async {
+    final userId = _auth.currentUser?.uid;
+    if (userId == null) return;
+
+    try {
+      final isBooked = await SupabaseService.isSlotBooked(
+        doctor['id'],
+        date.toIso8601String().split('T').first,
+        startTime,
+      );
+
+      if (isBooked) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('This slot is already booked'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      await SupabaseService.bookAppointment(
+        patientId: userId,
+        doctorId: doctor['id'],
+        date: date,
+        startTime: startTime,
+        endTime: endTime,
+      );
+
+      Navigator.pop(context); // Close booking dialog
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Appointment booked successfully'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+
+      _fetchAppointments(); // Refresh
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Booking failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildSectionTitle(String title, bool isDarkMode, ColorScheme colorScheme) {
+    return Text(
+      title,
+      style: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: isDarkMode ? Colors.white : Colors.black,
       ),
     );
   }

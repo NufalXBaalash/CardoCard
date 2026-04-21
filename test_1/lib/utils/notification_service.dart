@@ -2,6 +2,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:flutter_native_timezone_latest/flutter_native_timezone_latest.dart';
+import 'package:flutter/foundation.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -19,8 +20,17 @@ class NotificationService {
     try {
       // Initialize timezone
       tz.initializeTimeZones();
-      final String timeZoneName =
-          await FlutterNativeTimezoneLatest.getLocalTimezone();
+      String timeZoneName = 'UTC';
+      try {
+        if (!kIsWeb && 
+            (defaultTargetPlatform == TargetPlatform.android || 
+             defaultTargetPlatform == TargetPlatform.iOS || 
+             defaultTargetPlatform == TargetPlatform.macOS)) {
+          timeZoneName = await FlutterNativeTimezoneLatest.getLocalTimezone();
+        }
+      } catch (e) {
+        print('Could not get local timezone: $e');
+      }
       tz.setLocalLocation(tz.getLocation(timeZoneName));
 
       // Initialize notification settings

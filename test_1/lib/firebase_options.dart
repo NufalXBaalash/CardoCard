@@ -4,7 +4,7 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
-var api_key = "";
+var api_key = "AIzaSyBe7Cr3lSk7g2uDjcz6lN6bQCreiLSbba8";
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
 /// Example:
@@ -30,10 +30,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.windows:
         return windows;
       case TargetPlatform.linux:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for linux - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return web; // Fallback to web for linux testing
       default:
         throw UnsupportedError(
           'DefaultFirebaseOptions are not supported for this platform.',

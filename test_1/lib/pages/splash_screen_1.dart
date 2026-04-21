@@ -238,11 +238,11 @@ class _SplashScreen1State extends State<SplashScreen1>
       height: 8,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: isActive ? AppTheme.cardoBlue : Colors.grey.withValues(alpha: 0.3),
+        color: isActive ? AppTheme.cardoBlue : Colors.grey.withOpacity(0.3),
         boxShadow: isActive
             ? [
                 BoxShadow(
-                  color: AppTheme.cardoBlue.withValues(alpha: 0.3),
+                  color: AppTheme.cardoBlue.withOpacity(0.3),
                   blurRadius: 4,
                   offset: Offset(0, 2),
                 )
@@ -267,7 +267,7 @@ class _SplashScreen1State extends State<SplashScreen1>
           color: AppTheme.cardoBlue,
           boxShadow: [
             BoxShadow(
-              color: AppTheme.cardoBlue.withValues(alpha: 0.4),
+              color: AppTheme.cardoBlue.withOpacity(0.4),
               blurRadius: 10,
               offset: Offset(0, 4),
             ),
@@ -301,7 +301,7 @@ class _SplashScreen1State extends State<SplashScreen1>
           borderRadius: BorderRadius.circular(buttonHeight / 2),
           color: Colors.transparent,
           border: Border.all(
-            color: Colors.grey.withValues(alpha: 0.3),
+            color: Colors.grey.withOpacity(0.3),
             width: 1.5,
           ),
         ),

@@ -48,10 +48,7 @@ class _NFCReaderState extends State<NFCReader> {
       },
       onDiscovered: (NfcTag tag) async {
         setState(() {
-          // In nfc_manager 4.x, we access tech-specific data through their respective classes
-          // tag.data is protected, so we use NdefAndroid.from(tag) (or NdefIos for iOS)
           final ndef = NdefAndroid.from(tag);
-          
           if (ndef != null && ndef.cachedNdefMessage != null) {
             final records = ndef.cachedNdefMessage!.records;
             if (records.isNotEmpty) {
@@ -60,7 +57,6 @@ class _NFCReaderState extends State<NFCReader> {
               _nfcData = "No NDEF records";
             }
           } else {
-            // Fallback to raw data if needed, but handled via tech classes
             _nfcData = "Tag discovered";
           }
         });

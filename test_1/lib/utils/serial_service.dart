@@ -29,19 +29,31 @@ class SerialService {
     debugPrint("SERIAL_SYSTEM: Initializing Service...");
     _logDebug("Serial Service Started");
 
-    _eventSubscription = UsbSerial.usbEventStream?.listen((UsbEvent event) {
-      if (event.event == UsbEvent.ACTION_USB_ATTACHED) {
-        if (event.device != null) {
-          // Add a small delay for Android to stabilize the connection
-          Future.delayed(const Duration(milliseconds: 500), () {
-            _connectToDevice(event.device!);
-          });
+    // UsbSerial is only supported on Android, Windows, and macOS.
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.iOS) {
+      _logDebug("Serial Service not supported on this platform.");
+      return;
+    }
+
+    try {
+      _eventSubscription = UsbSerial.usbEventStream?.listen((UsbEvent event) {
+        if (event.event == UsbEvent.ACTION_USB_ATTACHED) {
+          if (event.device != null) {
+            // Add a small delay for Android to stabilize the connection
+            Future.delayed(const Duration(milliseconds: 500), () {
+              _connectToDevice(event.device!);
+            });
+          }
+        } else if (event.event == UsbEvent.ACTION_USB_DETACHED) {
+          _logDebug("Device Unplugged");
+          _disposeConnection();
         }
-      } else if (event.event == UsbEvent.ACTION_USB_DETACHED) {
-        _logDebug("Device Unplugged");
-        _disposeConnection();
-      }
-    });
+      }, onError: (err) {
+         _logDebug("USB Event Stream Error: $err");
+      });
+    } catch (e) {
+      _logDebug("Failed to listen to USB events: $e");
+    }
 
     _checkForExistingDevices();
   }
